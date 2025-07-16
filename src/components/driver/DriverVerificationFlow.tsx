@@ -637,8 +637,7 @@ export const DriverVerificationFlow: React.FC = () => {
             onClick={submitApplication}
             disabled={submitting || !consents.terms || !consents.backgroundCheck || 
                      !personalInfo.fullName || !personalInfo.phone || !personalInfo.dateOfBirth ||
-                     !personalInfo.address || !personalInfo.city || !personalInfo.state || !personalInfo.zipCode ||
-                     !vehicleInfo.make || !vehicleInfo.model || !vehicleInfo.year || !vehicleInfo.color || !vehicleInfo.licensePlate}
+                     !vehicleInfo.make || !vehicleInfo.model || !vehicleInfo.year || !vehicleInfo.licensePlate}
           >
             {submitting ? 'Submitting...' : 'Submit Application'}
           </Button>
