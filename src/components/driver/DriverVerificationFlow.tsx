@@ -159,6 +159,12 @@ export const DriverVerificationFlow: React.FC = () => {
     
     setSubmitting(true);
     try {
+      console.log('Starting application submission...', {
+        personalInfo,
+        vehicleInfo,
+        consents
+      });
+
       // First get the user's profile to link to driver_id
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -166,29 +172,38 @@ export const DriverVerificationFlow: React.FC = () => {
         .eq('user_id', user.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        throw profileError;
+      }
 
-      // Submit driver application
+      console.log('Found profile:', profile);
+
+      // Submit driver application with fallback values for required fields
+      const applicationData = {
+        driver_id: profile.id,
+        phone_number: personalInfo.phone || 'Not provided',
+        date_of_birth: personalInfo.dateOfBirth,
+        address: personalInfo.address || 'Not provided',
+        city: personalInfo.city || 'Not provided',
+        state: personalInfo.state || 'Not provided',
+        zip_code: personalInfo.zipCode || '00000',
+        driving_experience_years: parseInt(personalInfo.experience) || 0,
+        emergency_contact_name: 'Not provided',
+        emergency_contact_phone: 'Not provided',
+        has_criminal_record: !consents.criminalRecord,
+        background_check_consent: consents.backgroundCheck,
+        background_check_consent_at: consents.backgroundCheck ? new Date().toISOString() : null,
+        terms_accepted: consents.terms,
+        terms_accepted_at: consents.terms ? new Date().toISOString() : null,
+        status: 'pending'
+      };
+
+      console.log('Submitting application data:', applicationData);
+
       const { error: appError } = await supabase
         .from('driver_applications')
-        .insert({
-          driver_id: profile.id,
-          phone_number: personalInfo.phone,
-          date_of_birth: personalInfo.dateOfBirth,
-          address: personalInfo.address,
-          city: personalInfo.city,
-          state: personalInfo.state,
-          zip_code: personalInfo.zipCode,
-          driving_experience_years: parseInt(personalInfo.experience) || 0,
-          emergency_contact_name: 'Not provided',
-          emergency_contact_phone: 'Not provided',
-          has_criminal_record: !consents.criminalRecord,
-          background_check_consent: consents.backgroundCheck,
-          background_check_consent_at: consents.backgroundCheck ? new Date().toISOString() : null,
-          terms_accepted: consents.terms,
-          terms_accepted_at: consents.terms ? new Date().toISOString() : null,
-          status: 'pending'
-        });
+        .insert(applicationData);
 
       if (appError) throw appError;
 
