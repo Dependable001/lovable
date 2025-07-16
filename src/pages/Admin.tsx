@@ -101,6 +101,7 @@ export default function Admin() {
   // Check if user is admin and fetch permissions
   useEffect(() => {
     if (user) {
+      console.log('Fetching profile for user:', user.id);
       fetchProfile();
     }
   }, [user]);
@@ -108,11 +109,18 @@ export default function Admin() {
   // Fetch data if admin
   useEffect(() => {
     if (profile?.role === 'admin') {
+      console.log('User is admin, starting data fetch...');
+      // Prioritize critical data first
       fetchAdminPermissions();
-      fetchUsers();
-      fetchRides();
-      fetchDriverApplications();
       fetchStats();
+      fetchDriverApplications();
+      
+      // Delay non-critical data to improve perceived performance
+      setTimeout(() => {
+        console.log('Loading additional data...');
+        fetchUsers();
+        fetchRides();
+      }, 100);
     }
   }, [profile]);
 
@@ -137,6 +145,7 @@ export default function Admin() {
   };
 
   const fetchProfile = async () => {
+    console.log('Starting profile fetch...');
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -145,6 +154,7 @@ export default function Admin() {
         .single();
 
       if (error) throw error;
+      console.log('Profile fetched successfully:', data);
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -185,6 +195,7 @@ export default function Admin() {
   };
 
   const fetchDriverApplications = async () => {
+    console.log('Fetching driver applications...');
     try {
       const { data, error } = await supabase
         .from('driver_applications')
@@ -192,25 +203,35 @@ export default function Admin() {
           *,
           driver:profiles!driver_applications_driver_id_fkey(id, full_name, email)
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(20); // Limit initial load to improve performance
 
       if (error) throw error;
+      console.log('Applications fetched:', data?.length || 0);
       
-      // Fetch vehicle info separately for each driver
-      const applicationsWithVehicles = await Promise.all((data || []).map(async (app: any) => {
-        const { data: vehicleData } = await supabase
-          .from('vehicles')
-          .select('*')
-          .eq('driver_id', app.driver.id)
-          .single();
-        
-        return {
-          ...app,
-          vehicle: vehicleData
-        };
-      }));
+      // Only fetch vehicle info for applications that need it (not all at once)
+      const applicationsWithVehicles = data || [];
       
       setDriverApplications(applicationsWithVehicles as DriverApplication[]);
+      
+      // Fetch vehicle data lazily
+      if (data && data.length > 0) {
+        setTimeout(async () => {
+          const withVehicles = await Promise.all(data.map(async (app: any) => {
+            const { data: vehicleData } = await supabase
+              .from('vehicles')
+              .select('*')
+              .eq('driver_id', app.driver.id)
+              .single();
+            
+            return {
+              ...app,
+              vehicle: vehicleData
+            };
+          }));
+          setDriverApplications(withVehicles as DriverApplication[]);
+        }, 500);
+      }
     } catch (error) {
       console.error('Error fetching driver applications:', error);
     }
