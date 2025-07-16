@@ -19,7 +19,7 @@ import {
   BarChart3,
   LogOut
 } from 'lucide-react';
-import ubifyLogo from '@/assets/ubify-logo-final.png';
+
 import RiderDashboard from '@/components/RiderDashboard';
 import DriverDashboard from '@/components/DriverDashboard';
 import AdminDashboard from '@/components/AdminDashboard';
@@ -60,8 +60,8 @@ export default function Index() {
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
-                <img src={ubifyLogo} alt="Ubify" className="h-8 w-8" />
-                Ubify
+                <Car className="h-8 w-8 text-green-500" />
+                <span className="text-white">Ubi</span><span className="text-green-400">fy</span>
               </Link>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-muted-foreground">
@@ -95,8 +95,8 @@ export default function Index() {
           <div className="max-w-md mx-auto">
             <div className="text-center mb-8">
               <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-primary mb-4">
-                <img src={ubifyLogo} alt="Ubify" className="h-8 w-8" />
-                Ubify
+                <Car className="h-8 w-8 text-green-500" />
+                <span className="text-white">Ubi</span><span className="text-green-400">fy</span>
               </Link>
             </div>
             <AuthForm onSuccess={() => setShowAuth(false)} />
@@ -119,8 +119,8 @@ export default function Index() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
-              <img src={ubifyLogo} alt="Ubify" className="h-8 w-8" />
-              Ubify
+              <Car className="h-8 w-8 text-green-500" />
+              <span className="text-foreground">Ubi</span><span className="text-green-400">fy</span>
             </Link>
             <div className="flex items-center gap-4">
               <Button variant="ghost" onClick={() => setShowAuth(true)}>
@@ -442,8 +442,8 @@ export default function Index() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <Link to="/" className="flex items-center gap-2 text-xl font-bold text-primary mb-4">
-                <img src={ubifyLogo} alt="Ubify" className="h-6 w-6" />
-                Ubify
+                <Car className="h-6 w-6 text-green-500" />
+                <span className="text-foreground">Ubi</span><span className="text-green-400">fy</span>
               </Link>
               <p className="text-muted-foreground text-sm">
                 The decentralized ride-hailing platform connecting riders and drivers through blockchain.
