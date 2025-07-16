@@ -19,10 +19,10 @@ import {
   BarChart3,
   LogOut
 } from 'lucide-react';
-import { RiderDashboard } from '@/components/RiderDashboard';
-import { DriverDashboard } from '@/components/DriverDashboard';
-import { AdminDashboard } from '@/components/AdminDashboard';
-import { AuthForm } from '@/components/auth/AuthForm';
+import RiderDashboard from '@/components/RiderDashboard';
+import DriverDashboard from '@/components/DriverDashboard';
+import AdminDashboard from '@/components/AdminDashboard';
+import AuthForm from '@/components/auth/AuthForm';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -78,9 +78,9 @@ export default function Index() {
 
         {/* Dashboard Content */}
         <div className="container mx-auto px-4 py-8">
-          {userRole === 'rider' && <RiderDashboard />}
-          {userRole === 'driver' && <DriverDashboard />}
-          {userRole === 'admin' && <AdminDashboard />}
+          {userRole === 'rider' && <RiderDashboard onBack={() => setShowAuth(false)} />}
+          {userRole === 'driver' && <DriverDashboard onBack={() => setShowAuth(false)} />}
+          {userRole === 'admin' && <AdminDashboard onBack={() => setShowAuth(false)} />}
         </div>
       </div>
     );
@@ -98,7 +98,7 @@ export default function Index() {
                 RideShare
               </Link>
             </div>
-            <AuthForm onAuthSuccess={() => setShowAuth(false)} />
+            <AuthForm onSuccess={() => setShowAuth(false)} />
             <div className="text-center mt-4">
               <Button variant="ghost" onClick={() => setShowAuth(false)}>
                 ← Back to Home
