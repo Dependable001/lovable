@@ -136,52 +136,194 @@ export default function Index() {
       {/* Hero Section */}
       <section className="py-20">
         <div className="container mx-auto px-4 text-center">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
-              Decentralized Ride-Hailing
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Experience the future of transportation with blockchain-powered rides. 
-              Connect directly with drivers, enjoy transparent pricing, and be part of the revolution.
-            </p>
-            
-            {/* Quick Action Cards */}
-            <div className="grid md:grid-cols-2 gap-6 mt-12 max-w-2xl mx-auto">
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => setShowAuth(true)}>
-                <CardHeader className="text-center">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
-                    <MapPin className="h-8 w-8 text-primary" />
+          <div className="max-w-6xl mx-auto">
+            <div className="mb-16">
+              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
+                The <span className="text-green-400">decentralized</span> ride-hailing platform where<br />
+                drivers control pricing and riders get transparent offers
+              </h1>
+              
+              {/* Key Features */}
+              <div className="grid md:grid-cols-3 gap-8 mt-12 max-w-4xl mx-auto">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                    <span className="text-green-400 font-bold text-xl">$</span>
                   </div>
-                  <CardTitle className="text-xl">Need a Ride?</CardTitle>
-                  <CardDescription>
-                    Book a ride in seconds and get to your destination safely
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button className="w-full group-hover:bg-primary/90 transition-colors">
-                    Book a Ride
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-foreground">Drivers Keep 100%</h3>
+                    <p className="text-sm text-muted-foreground">No commissions taken</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                    <CreditCard className="h-6 w-6 text-blue-400" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-foreground">Transparent Pricing</h3>
+                    <p className="text-sm text-muted-foreground">See all offers upfront</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                    <Star className="h-6 w-6 text-yellow-400" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-foreground">Fair Negotiations</h3>
+                    <p className="text-sm text-muted-foreground">One counter allowed</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/driver-onboarding')}>
-                <CardHeader className="text-center">
-                  <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary/20 transition-colors">
-                    <Car className="h-8 w-8 text-secondary" />
-                  </div>
-                  <CardTitle className="text-xl">Drive & Earn</CardTitle>
-                  <CardDescription>
-                    Join our driver network and start earning on your schedule
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="secondary" className="w-full group-hover:bg-secondary/90 transition-colors">
-                    Become a Driver
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
+            {/* Choose Your Role Section */}
+            <div className="mt-16">
+              <h2 className="text-3xl font-bold text-foreground mb-4">Choose Your Role</h2>
+              <p className="text-muted-foreground mb-12">Get started with Ubify today</p>
+              
+              {/* Role Selection Buttons */}
+              <div className="flex justify-center gap-4 mb-12">
+                <Button 
+                  variant="default" 
+                  className="bg-green-500 hover:bg-green-600 text-white px-8"
+                  onClick={() => setShowAuth(true)}
+                >
+                  <MapPin className="mr-2 h-4 w-4" />
+                  Find a Ride
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-white/20 text-foreground hover:bg-white/10 px-8"
+                  onClick={() => navigate('/driver-onboarding')}
+                >
+                  <Car className="mr-2 h-4 w-4" />
+                  Drive & Earn
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-white/20 text-foreground hover:bg-white/10 px-8"
+                  onClick={() => setShowAuth(true)}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Sign In
+                </Button>
+              </div>
+
+              {/* Role Cards */}
+              <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                {/* Rider Card */}
+                <Card className="bg-card/50 backdrop-blur border-border/50 hover:bg-card/70 transition-all">
+                  <CardHeader className="text-center">
+                    <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <MapPin className="h-8 w-8 text-blue-400" />
+                    </div>
+                    <CardTitle className="text-xl">Rider</CardTitle>
+                    <CardDescription>Request rides and choose the best offers</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>See transparent pricing from all drivers</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>Negotiate once for fairness</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>Pay with card or cash</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>Rate your experience</span>
+                      </div>
+                    </div>
+                    <Button 
+                      className="w-full mt-4 bg-blue-500 hover:bg-blue-600"
+                      onClick={() => setShowAuth(true)}
+                    >
+                      Start as Rider
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Driver Card */}
+                <Card className="bg-card/50 backdrop-blur border-border/50 hover:bg-card/70 transition-all">
+                  <CardHeader className="text-center">
+                    <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Car className="h-8 w-8 text-green-400" />
+                    </div>
+                    <CardTitle className="text-xl">Driver</CardTitle>
+                    <CardDescription>Set your prices and accept rides you want</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>Control your pricing completely</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>Keep 100% of fare (no commissions)</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>Choose which rides to accept</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>Weekly/monthly subscription model</span>
+                      </div>
+                    </div>
+                    <Button 
+                      className="w-full mt-4 bg-green-500 hover:bg-green-600"
+                      onClick={() => navigate('/driver-onboarding')}
+                    >
+                      Start Driving
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Admin Card */}
+                <Card className="bg-card/50 backdrop-blur border-border/50 hover:bg-card/70 transition-all">
+                  <CardHeader className="text-center">
+                    <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Settings className="h-8 w-8 text-yellow-400" />
+                    </div>
+                    <CardTitle className="text-xl">Admin</CardTitle>
+                    <CardDescription>Manage platform and resolve disputes</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>Monitor user activity</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>Handle support tickets</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>Resolve disputes</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <span>Platform analytics</span>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="w-full mt-4 border-yellow-400 text-yellow-400 hover:bg-yellow-400/10"
+                      onClick={() => setShowAuth(true)}
+                    >
+                      Admin Panel
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>
