@@ -14,6 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
+      driver_applications: {
+        Row: {
+          address: string
+          background_check_consent: boolean
+          background_check_consent_at: string | null
+          city: string
+          created_at: string
+          criminal_record_details: string | null
+          date_of_birth: string
+          driver_id: string
+          driving_experience_years: number
+          emergency_contact_name: string
+          emergency_contact_phone: string
+          has_criminal_record: boolean
+          id: string
+          phone_number: string
+          previous_violations: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          state: string
+          status: string
+          terms_accepted: boolean
+          terms_accepted_at: string | null
+          updated_at: string
+          zip_code: string
+        }
+        Insert: {
+          address: string
+          background_check_consent?: boolean
+          background_check_consent_at?: string | null
+          city: string
+          created_at?: string
+          criminal_record_details?: string | null
+          date_of_birth: string
+          driver_id: string
+          driving_experience_years: number
+          emergency_contact_name: string
+          emergency_contact_phone: string
+          has_criminal_record?: boolean
+          id?: string
+          phone_number: string
+          previous_violations?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          state: string
+          status?: string
+          terms_accepted?: boolean
+          terms_accepted_at?: string | null
+          updated_at?: string
+          zip_code: string
+        }
+        Update: {
+          address?: string
+          background_check_consent?: boolean
+          background_check_consent_at?: string | null
+          city?: string
+          created_at?: string
+          criminal_record_details?: string | null
+          date_of_birth?: string
+          driver_id?: string
+          driving_experience_years?: number
+          emergency_contact_name?: string
+          emergency_contact_phone?: string
+          has_criminal_record?: boolean
+          id?: string
+          phone_number?: string
+          previous_violations?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          state?: string
+          status?: string
+          terms_accepted?: boolean
+          terms_accepted_at?: string | null
+          updated_at?: string
+          zip_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_applications_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_applications_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          document_url: string | null
+          driver_id: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          status: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          document_url?: string | null
+          driver_id: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          document_url?: string | null
+          driver_id?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_documents_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_documents_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       driver_subscriptions: {
         Row: {
           amount: number
@@ -211,6 +364,65 @@ export type Database = {
           {
             foreignKeyName: "rides_rider_id_fkey"
             columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          color: string
+          created_at: string
+          driver_id: string
+          id: string
+          is_active: boolean
+          is_verified: boolean
+          license_plate: string
+          make: string
+          model: string
+          seats: number
+          updated_at: string
+          vehicle_type: string
+          vin: string | null
+          year: number
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          driver_id: string
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          license_plate: string
+          make: string
+          model: string
+          seats?: number
+          updated_at?: string
+          vehicle_type: string
+          vin?: string | null
+          year: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          driver_id?: string
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          license_plate?: string
+          make?: string
+          model?: string
+          seats?: number
+          updated_at?: string
+          vehicle_type?: string
+          vin?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_driver_id_fkey"
+            columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

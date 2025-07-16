@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Car, DollarSign, Clock, MapPin, Star, CheckCircle, XCircle, MessageCircle } from "lucide-react";
+import { ArrowLeft, Car, DollarSign, Clock, MapPin, Star, CheckCircle, XCircle, MessageCircle, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
@@ -23,9 +26,104 @@ interface RideRequest {
 }
 
 const DriverDashboard = ({ onBack }: DriverDashboardProps) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(false);
   const [customPrice, setCustomPrice] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
+  const [driverApplication, setDriverApplication] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    fetchDriverStatus();
+  }, [user]);
+
+  const fetchDriverStatus = async () => {
+    try {
+      // Get user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user!.id)
+        .single();
+
+      if (profileError) throw profileError;
+      setProfile(profileData);
+
+      // Check driver application status
+      const { data: applicationData } = await supabase
+        .from('driver_applications')
+        .select('*')
+        .eq('driver_id', profileData.id)
+        .maybeSingle();
+
+      setDriverApplication(applicationData);
+    } catch (error) {
+      console.error('Error fetching driver status:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Redirect to onboarding if no application exists
+  useEffect(() => {
+    if (!loading && profile && !driverApplication) {
+      navigate('/driver-onboarding');
+    }
+  }, [loading, profile, driverApplication, navigate]);
+
+  // Show verification pending if application not approved
+  if (!loading && driverApplication && driverApplication.status !== 'approved') {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <div className="max-w-2xl mx-auto">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold">Driver Verification in Progress</CardTitle>
+              <CardDescription>
+                Your application is being reviewed
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="w-6 h-6 text-amber-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-medium text-amber-800">Verification Required</h3>
+                    <p className="text-amber-700 mt-1">
+                      You cannot access the driver dashboard until your application is approved. 
+                      Current status: <strong>{driverApplication.status.replace('_', ' ')}</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center space-y-4">
+                <Button onClick={() => navigate('/driver-onboarding')}>
+                  Check Application Status
+                </Button>
+                <Button variant="outline" onClick={onBack}>
+                  Return to Main Menu
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Car className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   const rideRequests: RideRequest[] = [
     {

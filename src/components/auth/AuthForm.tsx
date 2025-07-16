@@ -206,14 +206,31 @@ function SignUpForm({ onSubmit, loading }: { onSubmit: (email: string, password:
           >
             <Car className="h-6 w-6 mb-2" />
             <span>Driver</span>
-            <span className="text-xs text-muted-foreground">Offer rides</span>
+            <span className="text-xs text-muted-foreground">
+              {role === 'driver' ? 'Complete verification' : 'Offer rides'}
+            </span>
           </Button>
         </div>
       </div>
 
+      {role === 'driver' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-start space-x-2">
+            <Car className="w-5 h-5 text-amber-600 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium text-amber-800">Driver Verification Required</p>
+              <p className="text-amber-700 mt-1">
+                After account creation, you'll complete a comprehensive verification process including 
+                background checks, document uploads, and vehicle inspection.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Button type="submit" className="w-full" disabled={loading}>
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        Create Account
+        {role === 'driver' ? 'Start Driver Application' : 'Create Account'}
       </Button>
     </form>
   );
