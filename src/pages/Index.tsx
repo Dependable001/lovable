@@ -61,7 +61,7 @@ export default function Index() {
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
                 <Car className="h-8 w-8 text-green-500" />
-                <span className="text-white">Ubi</span><span className="text-green-400">fy</span>
+                <span><span className="text-white">Ubi</span><span className="text-green-400">fy</span></span>
               </Link>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-muted-foreground">
@@ -96,7 +96,7 @@ export default function Index() {
             <div className="text-center mb-8">
               <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-primary mb-4">
                 <Car className="h-8 w-8 text-green-500" />
-                <span className="text-white">Ubi</span><span className="text-green-400">fy</span>
+                <span><span className="text-white">Ubi</span><span className="text-green-400">fy</span></span>
               </Link>
             </div>
             <AuthForm onSuccess={() => setShowAuth(false)} />
@@ -120,7 +120,7 @@ export default function Index() {
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
               <Car className="h-8 w-8 text-green-500" />
-              <span className="text-foreground">Ubi</span><span className="text-green-400">fy</span>
+              <span><span className="text-foreground">Ubi</span><span className="text-green-400">fy</span></span>
             </Link>
             <div className="flex items-center gap-4">
               <Button variant="ghost" onClick={() => setShowAuth(true)}>
@@ -443,7 +443,7 @@ export default function Index() {
             <div>
               <Link to="/" className="flex items-center gap-2 text-xl font-bold text-primary mb-4">
                 <Car className="h-6 w-6 text-green-500" />
-                <span className="text-foreground">Ubi</span><span className="text-green-400">fy</span>
+                <span><span className="text-foreground">Ubi</span><span className="text-green-400">fy</span></span>
               </Link>
               <p className="text-muted-foreground text-sm">
                 The decentralized ride-hailing platform connecting riders and drivers through blockchain.
