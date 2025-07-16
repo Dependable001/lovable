@@ -19,7 +19,7 @@ import {
   BarChart3,
   LogOut
 } from 'lucide-react';
-import ubifyLogo from '@/assets/ubify-logo-correct.png';
+import ubifyLogo from '@/assets/ubify-logo-final.png';
 import RiderDashboard from '@/components/RiderDashboard';
 import DriverDashboard from '@/components/DriverDashboard';
 import AdminDashboard from '@/components/AdminDashboard';
