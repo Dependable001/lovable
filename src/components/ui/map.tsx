@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { Loader } from '@googlemaps/js-api-loader';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +16,7 @@ interface MapProps {
 }
 
 interface MapComponentState {
-  mapboxToken: string;
+  googleApiKey: string;
   showTokenInput: boolean;
 }
 
@@ -29,102 +28,149 @@ export default function Map({
   className = ""
 }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const map = useRef<google.maps.Map | null>(null);
   const [state, setState] = useState<MapComponentState>({
-    mapboxToken: '',
+    googleApiKey: '',
     showTokenInput: true
   });
   const { toast } = useToast();
   
-  const pickupMarker = useRef<mapboxgl.Marker | null>(null);
-  const dropoffMarker = useRef<mapboxgl.Marker | null>(null);
+  const pickupMarker = useRef<google.maps.Marker | null>(null);
+  const dropoffMarker = useRef<google.maps.Marker | null>(null);
+  const geocoder = useRef<google.maps.Geocoder | null>(null);
 
   useEffect(() => {
-    if (!state.mapboxToken || !mapContainer.current) return;
+    if (!state.googleApiKey || !mapContainer.current) return;
 
-    try {
-      mapboxgl.accessToken = state.mapboxToken;
-      
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [-74.006, 40.7128], // NYC default
-        zoom: 13,
-        pitch: 0,
-      });
+    const loader = new Loader({
+      apiKey: state.googleApiKey,
+      version: "weekly",
+      libraries: ["places"]
+    });
 
-      // Add navigation controls
-      map.current.addControl(
-        new mapboxgl.NavigationControl({
-          visualizePitch: true,
-        }),
-        'top-right'
-      );
+    loader.load().then(async () => {
+      if (!mapContainer.current) return;
 
-      // Add click handler for location selection
-      map.current.on('click', async (e) => {
-        if (!onLocationSelect) return;
-        
-        const { lng, lat } = e.lngLat;
-        
-        try {
-          // Reverse geocoding to get address
-          const response = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${state.mapboxToken}`
-          );
-          const data = await response.json();
-          const address = data.features[0]?.place_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      try {
+        // Initialize map
+        map.current = new google.maps.Map(mapContainer.current, {
+          center: { lat: 40.7128, lng: -74.006 }, // NYC default
+          zoom: 13,
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }]
+            }
+          ]
+        });
+
+        // Initialize geocoder
+        geocoder.current = new google.maps.Geocoder();
+
+        // Add click handler for location selection
+        map.current.addListener('click', async (e: google.maps.MapMouseEvent) => {
+          if (!onLocationSelect || !e.latLng) return;
           
-          onLocationSelect({ lat, lng, address });
-        } catch (error) {
-          console.error('Geocoding error:', error);
-          onLocationSelect({ 
-            lat, 
-            lng, 
-            address: `${lat.toFixed(4)}, ${lng.toFixed(4)}` 
-          });
-        }
-      });
-
-      // Get user location
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-            map.current?.setCenter([longitude, latitude]);
-          },
-          (error) => {
-            console.log('Geolocation error:', error);
+          const lat = e.latLng.lat();
+          const lng = e.latLng.lng();
+          
+          try {
+            // Reverse geocoding to get address
+            if (geocoder.current) {
+              geocoder.current.geocode(
+                { location: { lat, lng } },
+                (results, status) => {
+                  if (status === 'OK' && results?.[0]) {
+                    const address = results[0].formatted_address;
+                    onLocationSelect({ lat, lng, address });
+                  } else {
+                    onLocationSelect({ 
+                      lat, 
+                      lng, 
+                      address: `${lat.toFixed(4)}, ${lng.toFixed(4)}` 
+                    });
+                  }
+                }
+              );
+            }
+          } catch (error) {
+            console.error('Geocoding error:', error);
+            onLocationSelect({ 
+              lat, 
+              lng, 
+              address: `${lat.toFixed(4)}, ${lng.toFixed(4)}` 
+            });
           }
-        );
-      }
+        });
 
-    } catch (error) {
-      console.error('Map initialization error:', error);
+        // Get user location
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              map.current?.setCenter({ lat: latitude, lng: longitude });
+            },
+            (error) => {
+              console.log('Geolocation error:', error);
+            }
+          );
+        }
+
+      } catch (error) {
+        console.error('Map initialization error:', error);
+        toast({
+          title: "Map Error",
+          description: "Failed to initialize Google Maps. Please check your API key.",
+          variant: "destructive"
+        });
+      }
+    }).catch((error) => {
+      console.error('Google Maps API loading error:', error);
       toast({
-        title: "Map Error",
-        description: "Failed to initialize map. Please check your Mapbox token.",
+        title: "Map Loading Error",
+        description: "Failed to load Google Maps API. Please check your API key.",
         variant: "destructive"
       });
-    }
+    });
 
     return () => {
-      map.current?.remove();
+      // Google Maps cleanup is handled automatically
     };
-  }, [state.mapboxToken, onLocationSelect, toast]);
+  }, [state.googleApiKey, onLocationSelect, toast]);
 
   // Update pickup marker
   useEffect(() => {
     if (!map.current || !pickupLocation) return;
 
     if (pickupMarker.current) {
-      pickupMarker.current.remove();
+      pickupMarker.current.setMap(null);
     }
 
-    pickupMarker.current = new mapboxgl.Marker({ color: '#22c55e' })
-      .setLngLat([pickupLocation.lng, pickupLocation.lat])
-      .setPopup(new mapboxgl.Popup().setHTML(`<div class="font-medium">Pickup: ${pickupLocation.address}</div>`))
-      .addTo(map.current);
+    pickupMarker.current = new google.maps.Marker({
+      position: { lat: pickupLocation.lat, lng: pickupLocation.lng },
+      map: map.current,
+      title: `Pickup: ${pickupLocation.address}`,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#22c55e"/>
+            <circle cx="12" cy="9" r="2.5" fill="white"/>
+          </svg>
+        `),
+        scaledSize: new google.maps.Size(32, 32),
+        anchor: new google.maps.Point(16, 32)
+      }
+    });
+
+    // Add info window
+    const infoWindow = new google.maps.InfoWindow({
+      content: `<div style="font-weight: 500;">Pickup: ${pickupLocation.address}</div>`
+    });
+
+    pickupMarker.current.addListener('click', () => {
+      infoWindow.open(map.current, pickupMarker.current);
+    });
   }, [pickupLocation]);
 
   // Update dropoff marker
@@ -132,31 +178,51 @@ export default function Map({
     if (!map.current || !dropoffLocation) return;
 
     if (dropoffMarker.current) {
-      dropoffMarker.current.remove();
+      dropoffMarker.current.setMap(null);
     }
 
-    dropoffMarker.current = new mapboxgl.Marker({ color: '#ef4444' })
-      .setLngLat([dropoffLocation.lng, dropoffLocation.lat])
-      .setPopup(new mapboxgl.Popup().setHTML(`<div class="font-medium">Dropoff: ${dropoffLocation.address}</div>`))
-      .addTo(map.current);
+    dropoffMarker.current = new google.maps.Marker({
+      position: { lat: dropoffLocation.lat, lng: dropoffLocation.lng },
+      map: map.current,
+      title: `Dropoff: ${dropoffLocation.address}`,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#ef4444"/>
+            <circle cx="12" cy="9" r="2.5" fill="white"/>
+          </svg>
+        `),
+        scaledSize: new google.maps.Size(32, 32),
+        anchor: new google.maps.Point(16, 32)
+      }
+    });
+
+    // Add info window
+    const infoWindow = new google.maps.InfoWindow({
+      content: `<div style="font-weight: 500;">Dropoff: ${dropoffLocation.address}</div>`
+    });
+
+    dropoffMarker.current.addListener('click', () => {
+      infoWindow.open(map.current, dropoffMarker.current);
+    });
   }, [dropoffLocation]);
 
   // Auto-fit to show both markers
   useEffect(() => {
     if (!map.current || !pickupLocation || !dropoffLocation) return;
 
-    const bounds = new mapboxgl.LngLatBounds();
-    bounds.extend([pickupLocation.lng, pickupLocation.lat]);
-    bounds.extend([dropoffLocation.lng, dropoffLocation.lat]);
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend({ lat: pickupLocation.lat, lng: pickupLocation.lng });
+    bounds.extend({ lat: dropoffLocation.lat, lng: dropoffLocation.lng });
 
-    map.current.fitBounds(bounds, { padding: 50 });
+    map.current.fitBounds(bounds, 50);
   }, [pickupLocation, dropoffLocation]);
 
   const handleTokenSubmit = () => {
-    if (!state.mapboxToken.trim()) {
+    if (!state.googleApiKey.trim()) {
       toast({
-        title: "Token Required",
-        description: "Please enter your Mapbox public token",
+        title: "API Key Required",
+        description: "Please enter your Google Maps API key",
         variant: "destructive"
       });
       return;
@@ -174,17 +240,17 @@ export default function Map({
             <h3 className="text-lg font-semibold">Map Configuration</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            Enter your Mapbox public token to enable the interactive map. 
-            Get your token at <a href="https://mapbox.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">mapbox.com</a>
+            Enter your Google Maps API key to enable the interactive map. 
+            Get your API key at <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google Cloud Console</a>
           </p>
           <div className="space-y-2">
-            <Label htmlFor="mapbox-token">Mapbox Public Token</Label>
+            <Label htmlFor="google-api-key">Google Maps API Key</Label>
             <Input
-              id="mapbox-token"
+              id="google-api-key"
               type="password"
-              placeholder="pk.eyJ1IjoieW91cnVzZXJuYW1lIiwiYSI6InlvdXJ0b2tlbiJ9..."
-              value={state.mapboxToken}
-              onChange={(e) => setState(prev => ({ ...prev, mapboxToken: e.target.value }))}
+              placeholder="AIzaSyBdVl-cTICSwYKpe92FcFj9M..."
+              value={state.googleApiKey}
+              onChange={(e) => setState(prev => ({ ...prev, googleApiKey: e.target.value }))}
               onKeyPress={(e) => e.key === 'Enter' && handleTokenSubmit()}
             />
           </div>
