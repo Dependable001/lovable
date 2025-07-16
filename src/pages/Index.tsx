@@ -19,6 +19,7 @@ import {
   BarChart3,
   LogOut
 } from 'lucide-react';
+import ubifyLogo from '@/assets/ubify-logo.png';
 import RiderDashboard from '@/components/RiderDashboard';
 import DriverDashboard from '@/components/DriverDashboard';
 import AdminDashboard from '@/components/AdminDashboard';
@@ -59,7 +60,7 @@ export default function Index() {
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
-                <Car className="h-8 w-8" />
+                <img src={ubifyLogo} alt="Ubify" className="h-8 w-8" />
                 Ubify
               </Link>
               <div className="flex items-center gap-4">
@@ -94,7 +95,7 @@ export default function Index() {
           <div className="max-w-md mx-auto">
             <div className="text-center mb-8">
               <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-primary mb-4">
-                <Car className="h-8 w-8" />
+                <img src={ubifyLogo} alt="Ubify" className="h-8 w-8" />
                 Ubify
               </Link>
             </div>
@@ -118,7 +119,7 @@ export default function Index() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
-              <Car className="h-8 w-8" />
+              <img src={ubifyLogo} alt="Ubify" className="h-8 w-8" />
               Ubify
             </Link>
             <div className="flex items-center gap-4">
@@ -441,7 +442,7 @@ export default function Index() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <Link to="/" className="flex items-center gap-2 text-xl font-bold text-primary mb-4">
-                <Car className="h-6 w-6" />
+                <img src={ubifyLogo} alt="Ubify" className="h-6 w-6" />
                 Ubify
               </Link>
               <p className="text-muted-foreground text-sm">
