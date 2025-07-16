@@ -1,345 +1,347 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, MapPin, DollarSign, Shield, Star, Users, Crown, Settings, LogIn } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import AuthForm from "@/components/auth/AuthForm";
-import RiderDashboard from "@/components/RiderDashboard";
-import DriverDashboard from "@/components/DriverDashboard";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Car, 
+  MapPin, 
+  Users, 
+  Shield, 
+  Star, 
+  Clock,
+  CreditCard,
+  Smartphone,
+  ArrowRight,
+  User,
+  Settings,
+  BarChart3,
+  LogOut
+} from 'lucide-react';
+import { RiderDashboard } from '@/components/RiderDashboard';
+import { DriverDashboard } from '@/components/DriverDashboard';
+import { AdminDashboard } from '@/components/AdminDashboard';
+import { AuthForm } from '@/components/auth/AuthForm';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-interface Profile {
-  role: 'rider' | 'driver' | 'admin';
-  full_name: string;
-}
-
-type UserRole = "rider" | "driver" | "admin" | null;
-
-const Index = () => {
-  const [selectedRole, setSelectedRole] = useState<UserRole>(null);
+export default function Index() {
+  const { user, userRole, profile, loading } = useAuth();
+  const navigate = useNavigate();
   const [showAuth, setShowAuth] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
-
-  const fetchProfile = async () => {
+  const handleSignOut = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role, full_name')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (error) throw error;
-      setProfile(data);
+      await supabase.auth.signOut();
+      toast.success('Signed out successfully');
+      navigate('/');
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      toast.error('Error signing out');
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // If user is authenticated, show their dashboard
+  if (user && userRole) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
+                <Car className="h-8 w-8" />
+                RideShare
+              </Link>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-muted-foreground">
+                  Welcome, {profile?.full_name || user?.email}
+                </span>
+                <Badge variant="outline">{userRole}</Badge>
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Dashboard Content */}
+        <div className="container mx-auto px-4 py-8">
+          {userRole === 'rider' && <RiderDashboard />}
+          {userRole === 'driver' && <DriverDashboard />}
+          {userRole === 'admin' && <AdminDashboard />}
         </div>
       </div>
     );
   }
 
+  // Show auth form if requested
   if (showAuth) {
-    return <AuthForm onSuccess={() => {
-      setShowAuth(false);
-      window.location.reload();
-    }} />;
-  }
-
-  // If user is logged in, show dashboard based on their role
-  if (user && profile) {
-    if (profile.role === "rider") {
-      return <RiderDashboard onBack={() => {}} />;
-    }
-    if (profile.role === "driver") {
-      return <DriverDashboard onBack={() => {}} />;
-    }
-    if (profile.role === "admin") {
-      window.location.href = '/admin';
-      return null;
-    }
-  }
-
-  // Role selection for non-authenticated users
-  if (selectedRole === "rider" || selectedRole === "driver") {
-    setShowAuth(true);
-    return null;
-  }
-
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-surface"></div>
-        <div className="relative z-10 container mx-auto px-4 py-20">
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 mb-6">
-              <Car className="h-8 w-8 text-ubify-primary" />
-              <h1 className="text-4xl md:text-6xl font-bold text-foreground">
-                Ubi<span className="text-ubify-primary">fy</span>
-              </h1>
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-md mx-auto">
+            <div className="text-center mb-8">
+              <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-primary mb-4">
+                <Car className="h-8 w-8" />
+                RideShare
+              </Link>
             </div>
-            
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
-              The <span className="text-ubify-primary font-semibold">decentralized</span> ride-hailing platform where 
-              <br className="hidden md:block" />
-              drivers control pricing and riders get transparent offers
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-ubify-primary/20 flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-ubify-primary" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-foreground">Drivers Keep 100%</h3>
-                  <p className="text-sm text-muted-foreground">No commissions taken</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-ubify-trust/20 flex items-center justify-center">
-                  <Shield className="h-6 w-6 text-ubify-trust" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-foreground">Transparent Pricing</h3>
-                  <p className="text-sm text-muted-foreground">See all offers upfront</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-ubify-secondary/20 flex items-center justify-center">
-                  <Star className="h-6 w-6 text-ubify-secondary" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-foreground">Fair Negotiations</h3>
-                  <p className="text-sm text-muted-foreground">One counter allowed</p>
-                </div>
-              </div>
+            <AuthForm onAuthSuccess={() => setShowAuth(false)} />
+            <div className="text-center mt-4">
+              <Button variant="ghost" onClick={() => setShowAuth(false)}>
+                ← Back to Home
+              </Button>
             </div>
           </div>
         </div>
       </div>
+    );
+  }
 
-      {/* Role Selection */}
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-foreground mb-4">Choose Your Role</h2>
-          <p className="text-muted-foreground">Get started with Ubify today</p>
-        </div>
-
-        <div className="text-center mb-8">
-          {user ? (
-            <div>
-              <p className="text-lg mb-4">Welcome back, {profile?.full_name}!</p>
-              <div className="flex gap-4 justify-center">
-                <Button 
-                  size="lg" 
-                  className="px-8 py-6 text-lg"
-                  onClick={() => window.location.href = '/book-ride'}
-                >
-                  <Car className="mr-2 h-5 w-5" />
-                  Book a Ride
-                </Button>
-                <Button 
-                  variant="outline"
-                  size="lg" 
-                  className="px-8 py-6 text-lg"
-                  onClick={() => window.location.reload()}
-                >
-                  Go to Dashboard
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button 
-                size="lg" 
-                className="px-8 py-6 text-lg"
-                onClick={() => setSelectedRole("rider")}
-              >
-                <Users className="mr-2 h-5 w-5" />
-                Find a Ride
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="px-8 py-6 text-lg"
-                onClick={() => setSelectedRole("driver")}
-              >
-                <Car className="mr-2 h-5 w-5" />
-                Drive & Earn
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="lg" 
-                className="px-8 py-6 text-lg"
-                onClick={() => setShowAuth(true)}
-              >
-                <LogIn className="mr-2 h-5 w-5" />
+  // Landing page for non-authenticated users
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
+      {/* Header */}
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
+              <Car className="h-8 w-8" />
+              RideShare
+            </Link>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" onClick={() => setShowAuth(true)}>
                 Sign In
               </Button>
+              <Button onClick={() => setShowAuth(true)}>
+                Get Started
+              </Button>
             </div>
-          )}
-        </div>
-
-        {!user && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            {/* Rider Card */}
-            <Card className="relative group hover:shadow-trust transition-all duration-300 cursor-pointer border-border/50 hover:border-ubify-trust/50"
-                  onClick={() => setSelectedRole("rider")}>
-              <CardHeader className="text-center pb-4">
-                <div className="w-16 h-16 rounded-full bg-ubify-trust/20 flex items-center justify-center mx-auto mb-4 group-hover:bg-ubify-trust/30 transition-colors">
-                  <MapPin className="h-8 w-8 text-ubify-trust" />
-                </div>
-                <CardTitle className="text-xl">Rider</CardTitle>
-                <CardDescription>Request rides and choose the best offers</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-trust"></div>
-                    See transparent pricing from all drivers
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-trust"></div>
-                    Negotiate once for fairness
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-trust"></div>
-                    Pay with card or cash
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-trust"></div>
-                    Rate your experience
-                  </li>
-                </ul>
-                <Button variant="ubify-outline" className="w-full mt-6">
-                  <MapPin className="mr-2 h-4 w-4" />
-                  Start as Rider
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Driver Card */}
-            <Card className="relative group hover:shadow-glow transition-all duration-300 cursor-pointer border-border/50 hover:border-ubify-primary/50"
-                  onClick={() => setSelectedRole("driver")}>
-              <CardHeader className="text-center pb-4">
-                <div className="w-16 h-16 rounded-full bg-ubify-primary/20 flex items-center justify-center mx-auto mb-4 group-hover:bg-ubify-primary/30 transition-colors">
-                  <Car className="h-8 w-8 text-ubify-primary" />
-                </div>
-                <CardTitle className="text-xl">Driver</CardTitle>
-                <CardDescription>Set your prices and accept rides your way</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-primary"></div>
-                    Control your pricing completely
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-primary"></div>
-                    Keep 100% of fare (no commissions)
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-primary"></div>
-                    Choose which rides to accept
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-primary"></div>
-                    Weekly/monthly subscription model
-                  </li>
-                </ul>
-                <Button variant="ubify" className="w-full mt-6">
-                  <Car className="mr-2 h-4 w-4" />
-                  Start Driving
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Admin Card */}
-            <Card className="relative group hover:shadow-trust transition-all duration-300 cursor-pointer border-border/50 hover:border-ubify-secondary/50"
-                  onClick={() => window.location.href = '/admin'}>
-              <CardHeader className="text-center pb-4">
-                <div className="w-16 h-16 rounded-full bg-ubify-secondary/20 flex items-center justify-center mx-auto mb-4 group-hover:bg-ubify-secondary/30 transition-colors">
-                  <Crown className="h-8 w-8 text-ubify-secondary" />
-                </div>
-                <CardTitle className="text-xl">Admin</CardTitle>
-                <CardDescription>Manage platform and resolve disputes</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-secondary"></div>
-                    Monitor user activity
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-secondary"></div>
-                    Handle support tickets
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-secondary"></div>
-                    Resolve disputes
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ubify-secondary"></div>
-                    Platform analytics
-                  </li>
-                </ul>
-                <Button variant="outline" className="w-full mt-6 border-ubify-secondary text-ubify-secondary hover:bg-ubify-secondary hover:text-ubify-dark">
-                  Admin Panel
-                </Button>
-              </CardContent>
-            </Card>
           </div>
-        )}
+        </div>
+      </header>
 
-        {/* Trust Section */}
-        <div className="bg-gradient-surface py-16 mt-16">
-          <div className="container mx-auto px-4">
-            <div className="text-center max-w-3xl mx-auto">
-              <h2 className="text-3xl font-bold text-foreground mb-6">Built on Trust & Transparency</h2>
-              <p className="text-muted-foreground mb-8 leading-relaxed">
-                Ubify eliminates the black box of traditional ride-hailing. Every driver sets their own fair price, 
-                every rider sees all options, and negotiations happen in the open.
+      {/* Hero Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4 text-center">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
+              Your Ride, Your Way
+            </h1>
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Connect with drivers in your area for safe, reliable, and affordable rides. 
+              Whether you're a rider or driver, we've got you covered.
+            </p>
+            
+            {/* Quick Action Cards */}
+            <div className="grid md:grid-cols-2 gap-6 mt-12 max-w-2xl mx-auto">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => setShowAuth(true)}>
+                <CardHeader className="text-center">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
+                    <MapPin className="h-8 w-8 text-primary" />
+                  </div>
+                  <CardTitle className="text-xl">Need a Ride?</CardTitle>
+                  <CardDescription>
+                    Book a ride in seconds and get to your destination safely
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button className="w-full group-hover:bg-primary/90 transition-colors">
+                    Book a Ride
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/driver-onboarding')}>
+                <CardHeader className="text-center">
+                  <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary/20 transition-colors">
+                    <Car className="h-8 w-8 text-secondary" />
+                  </div>
+                  <CardTitle className="text-xl">Drive & Earn</CardTitle>
+                  <CardDescription>
+                    Join our driver network and start earning on your schedule
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="secondary" className="w-full group-hover:bg-secondary/90 transition-colors">
+                    Become a Driver
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Why Choose RideShare?
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Experience the future of transportation with our cutting-edge platform
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Safe & Secure</h3>
+              <p className="text-muted-foreground">
+                All drivers are thoroughly vetted with background checks and vehicle inspections
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="text-center">
-                  <Users className="h-12 w-12 text-ubify-primary mx-auto mb-4" />
-                  <h3 className="font-semibold text-foreground mb-2">Driver Autonomy</h3>
-                  <p className="text-sm text-muted-foreground">Complete control over pricing and ride acceptance</p>
-                </div>
-                <div className="text-center">
-                  <Shield className="h-12 w-12 text-ubify-trust mx-auto mb-4" />
-                  <h3 className="font-semibold text-foreground mb-2">Rider Protection</h3>
-                  <p className="text-sm text-muted-foreground">See all offers, negotiate fairly, pay securely</p>
-                </div>
-                <div className="text-center">
-                  <Settings className="h-12 w-12 text-ubify-secondary mx-auto mb-4" />
-                  <h3 className="font-semibold text-foreground mb-2">Fair Platform</h3>
-                  <p className="text-sm text-muted-foreground">No hidden commissions, transparent operations</p>
-                </div>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Clock className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Fast & Reliable</h3>
+              <p className="text-muted-foreground">
+                Quick pickup times with real-time tracking and professional drivers
+              </p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CreditCard className="h-8 w-8 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Easy Payment</h3>
+              <p className="text-muted-foreground">
+                Seamless cashless payments with transparent pricing and receipts
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-4 gap-8 text-center">
+            <div>
+              <div className="text-3xl font-bold text-primary mb-2">10K+</div>
+              <div className="text-muted-foreground">Active Riders</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-primary mb-2">500+</div>
+              <div className="text-muted-foreground">Verified Drivers</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-primary mb-2">50K+</div>
+              <div className="text-muted-foreground">Completed Rides</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-primary mb-2">4.9</div>
+              <div className="text-muted-foreground flex items-center justify-center gap-1">
+                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                Average Rating
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Call to Action */}
+      <section className="py-20 bg-primary">
+        <div className="container mx-auto px-4 text-center">
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+              Ready to Get Started?
+            </h2>
+            <p className="text-lg text-primary-foreground/80 mb-8">
+              Join thousands of satisfied users who trust RideShare for their daily transportation needs
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                size="lg" 
+                variant="secondary"
+                onClick={() => setShowAuth(true)}
+                className="text-lg px-8"
+              >
+                <Smartphone className="mr-2 h-5 w-5" />
+                Download App
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline"
+                onClick={() => setShowAuth(true)}
+                className="text-lg px-8 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary"
+              >
+                Sign Up Now
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-background border-t py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <Link to="/" className="flex items-center gap-2 text-xl font-bold text-primary mb-4">
+                <Car className="h-6 w-6" />
+                RideShare
+              </Link>
+              <p className="text-muted-foreground text-sm">
+                The most reliable ride-sharing platform connecting riders and drivers.
+              </p>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">For Riders</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="#" className="hover:text-foreground transition-colors">Book a Ride</Link></li>
+                <li><Link to="#" className="hover:text-foreground transition-colors">Safety</Link></li>
+                <li><Link to="#" className="hover:text-foreground transition-colors">Pricing</Link></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">For Drivers</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="/driver-onboarding" className="hover:text-foreground transition-colors">Apply to Drive</Link></li>
+                <li><Link to="#" className="hover:text-foreground transition-colors">Requirements</Link></li>
+                <li><Link to="#" className="hover:text-foreground transition-colors">Earnings</Link></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="#" className="hover:text-foreground transition-colors">Help Center</Link></li>
+                <li><Link to="#" className="hover:text-foreground transition-colors">Contact Us</Link></li>
+                <li><Link to="#" className="hover:text-foreground transition-colors">Terms</Link></li>
+              </ul>
+            </div>
+          </div>
+          
+          <Separator className="my-8" />
+          
+          <div className="text-center text-sm text-muted-foreground">
+            <p>&copy; 2024 RideShare. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
-};
-
-export default Index;
+}
