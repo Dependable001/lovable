@@ -146,13 +146,24 @@ const Index = () => {
           {user ? (
             <div>
               <p className="text-lg mb-4">Welcome back, {profile?.full_name}!</p>
-              <Button 
-                size="lg" 
-                className="px-8 py-6 text-lg"
-                onClick={() => window.location.reload()}
-              >
-                Go to Dashboard
-              </Button>
+              <div className="flex gap-4 justify-center">
+                <Button 
+                  size="lg" 
+                  className="px-8 py-6 text-lg"
+                  onClick={() => window.location.href = '/book-ride'}
+                >
+                  <Car className="mr-2 h-5 w-5" />
+                  Book a Ride
+                </Button>
+                <Button 
+                  variant="outline"
+                  size="lg" 
+                  className="px-8 py-6 text-lg"
+                  onClick={() => window.location.reload()}
+                >
+                  Go to Dashboard
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -218,6 +229,7 @@ const Index = () => {
                   </li>
                 </ul>
                 <Button variant="ubify-outline" className="w-full mt-6">
+                  <MapPin className="mr-2 h-4 w-4" />
                   Start as Rider
                 </Button>
               </CardContent>
@@ -253,6 +265,7 @@ const Index = () => {
                   </li>
                 </ul>
                 <Button variant="ubify" className="w-full mt-6">
+                  <Car className="mr-2 h-4 w-4" />
                   Start Driving
                 </Button>
               </CardContent>
