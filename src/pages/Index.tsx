@@ -81,7 +81,17 @@ export default function Index() {
         <div className="container mx-auto px-4 py-8">
           {userRole === 'rider' && <RiderDashboard onBack={() => setShowAuth(false)} />}
           {userRole === 'driver' && <DriverDashboard onBack={() => setShowAuth(false)} />}
-          {userRole === 'admin' && <AdminDashboard onBack={() => setShowAuth(false)} />}
+          {userRole === 'admin' && (
+            <div className="text-center">
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-foreground mb-4">Admin Access</h2>
+                <p className="text-muted-foreground mb-6">Redirecting to admin panel...</p>
+              </div>
+              <Button onClick={() => navigate('/admin')} className="bg-primary hover:bg-primary/90">
+                Access Admin Panel
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
