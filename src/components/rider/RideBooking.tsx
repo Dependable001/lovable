@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, DollarSign, Clock, CreditCard, Banknote, Navigation, Loader2, AlertCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MapPin, DollarSign, Clock, CreditCard, Banknote, Navigation, Loader2, AlertCircle, Map as MapIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import Map from "@/components/ui/map";
 
 interface RideBookingProps {
   profileId: string;
@@ -48,44 +50,11 @@ export default function RideBooking({ profileId, onRideRequested }: RideBookingP
   const [fareEstimate, setFareEstimate] = useState<FareEstimate | null>(null);
   const [pickupSuggestions, setPickupSuggestions] = useState<LocationSuggestion[]>([]);
   const [dropoffSuggestions, setDropoffSuggestions] = useState<LocationSuggestion[]>([]);
-  const [showPickupSuggestions, setShowPickupSuggestions] = useState(false);
-  const [showDropoffSuggestions, setShowDropoffSuggestions] = useState(false);
+  const [mapPickupLocation, setMapPickupLocation] = useState<{lat: number; lng: number; address: string} | null>(null);
+  const [mapDropoffLocation, setMapDropoffLocation] = useState<{lat: number; lng: number; address: string} | null>(null);
+  const [locationSelectionMode, setLocationSelectionMode] = useState<'pickup' | 'dropoff' | null>(null);
 
-  // Get current location for pickup
-  const getCurrentLocation = async () => {
-    if (!navigator.geolocation) {
-      toast({
-        title: "Location not supported",
-        description: "Your browser doesn't support location services",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        setPickupCoords({ lat: latitude, lng: longitude });
-        
-        // Reverse geocode to get address
-        try {
-          // For demo purposes, we'll use a mock address
-          setPickup(`Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
-        } catch (error) {
-          console.error('Reverse geocoding failed:', error);
-        }
-      },
-      (error) => {
-        toast({
-          title: "Location access denied",
-          description: "Please enter your pickup location manually",
-          variant: "destructive"
-        });
-      }
-    );
-  };
-
-  // Mock location search (in real app, use Google Places API)
+  // Mock location search (in real app, use Google Places API or Mapbox Geocoding)
   const searchLocations = async (query: string): Promise<LocationSuggestion[]> => {
     if (query.length < 3) return [];
     
@@ -103,41 +72,50 @@ export default function RideBooking({ profileId, onRideRequested }: RideBookingP
     );
   };
 
-  // Handle pickup location search
-  const handlePickupSearch = async (value: string) => {
+  const handlePickupChange = async (value: string) => {
     setPickup(value);
     if (value.length >= 3) {
       const suggestions = await searchLocations(value);
       setPickupSuggestions(suggestions);
-      setShowPickupSuggestions(true);
     } else {
-      setShowPickupSuggestions(false);
+      setPickupSuggestions([]);
     }
   };
 
-  // Handle dropoff location search
-  const handleDropoffSearch = async (value: string) => {
+  const handleDropoffChange = async (value: string) => {
     setDropoff(value);
     if (value.length >= 3) {
       const suggestions = await searchLocations(value);
       setDropoffSuggestions(suggestions);
-      setShowDropoffSuggestions(true);
     } else {
-      setShowDropoffSuggestions(false);
+      setDropoffSuggestions([]);
     }
   };
 
-  // Select location from suggestions
-  const selectPickupLocation = (suggestion: LocationSuggestion) => {
+  const selectPickupSuggestion = (suggestion: LocationSuggestion) => {
     setPickup(suggestion.description);
     setPickupCoords(suggestion.lat && suggestion.lng ? { lat: suggestion.lat, lng: suggestion.lng } : null);
-    setShowPickupSuggestions(false);
+    setPickupSuggestions([]);
   };
 
-  const selectDropoffLocation = (suggestion: LocationSuggestion) => {
+  const selectDropoffSuggestion = (suggestion: LocationSuggestion) => {
     setDropoff(suggestion.description);
     setDropoffCoords(suggestion.lat && suggestion.lng ? { lat: suggestion.lat, lng: suggestion.lng } : null);
-    setShowDropoffSuggestions(false);
+    setDropoffSuggestions([]);
+  };
+
+  const handleMapLocationSelect = (location: { lat: number; lng: number; address: string }) => {
+    if (locationSelectionMode === 'pickup') {
+      setMapPickupLocation(location);
+      setPickup(location.address);
+      setPickupCoords({ lat: location.lat, lng: location.lng });
+      setLocationSelectionMode(null);
+    } else if (locationSelectionMode === 'dropoff') {
+      setMapDropoffLocation(location);
+      setDropoff(location.address);
+      setDropoffCoords({ lat: location.lat, lng: location.lng });
+      setLocationSelectionMode(null);
+    }
   };
 
   // Calculate fare estimate when both locations are set
@@ -152,7 +130,7 @@ export default function RideBooking({ profileId, onRideRequested }: RideBookingP
 
     setEstimating(true);
     try {
-      // Calculate distance using Haversine formula (mock implementation)
+      // Calculate distance using Haversine formula
       const distance = calculateDistance(
         pickupCoords.lat, pickupCoords.lng,
         dropoffCoords.lat, dropoffCoords.lng
@@ -254,6 +232,8 @@ export default function RideBooking({ profileId, onRideRequested }: RideBookingP
       setDropoffCoords(null);
       setRiderNotes("");
       setFareEstimate(null);
+      setMapPickupLocation(null);
+      setMapDropoffLocation(null);
 
     } catch (error) {
       console.error('Error creating ride request:', error);
@@ -268,146 +248,190 @@ export default function RideBooking({ profileId, onRideRequested }: RideBookingP
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Main Booking Form */}
+    <div className="max-w-4xl mx-auto space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
-            Book Your Ride
+            <Navigation className="h-5 w-5" />
+            Book a Ride
           </CardTitle>
           <CardDescription>
             Enter your pickup and destination to request a ride
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Pickup Location */}
-          <div className="relative">
-            <label className="text-sm font-medium mb-2 block">
-              Pickup Location
-            </label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter pickup address..."
-                value={pickup}
-                onChange={(e) => handlePickupSearch(e.target.value)}
-                onFocus={() => pickup.length >= 3 && setShowPickupSuggestions(true)}
-                className="flex-1"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={getCurrentLocation}
-                className="shrink-0"
-              >
-                <Navigation className="h-4 w-4" />
-              </Button>
-            </div>
+          {/* Location Selection with Map */}
+          <Tabs defaultValue="form" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="form" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Address Form
+              </TabsTrigger>
+              <TabsTrigger value="map" className="flex items-center gap-2">
+                <MapIcon className="h-4 w-4" />
+                Interactive Map
+              </TabsTrigger>
+            </TabsList>
             
-            {/* Pickup Suggestions */}
-            {showPickupSuggestions && pickupSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                {pickupSuggestions.map((suggestion) => (
-                  <button
-                    key={suggestion.id}
-                    className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
-                    onClick={() => selectPickupLocation(suggestion)}
-                  >
-                    {suggestion.description}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+            <TabsContent value="form" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 gap-4">
+                {/* Pickup Location */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-green-600" />
+                    Pickup Location
+                  </label>
+                  <div className="relative">
+                    <Input
+                      placeholder="Enter pickup address"
+                      value={pickup}
+                      onChange={(e) => handlePickupChange(e.target.value)}
+                      className="pl-3"
+                    />
+                    {pickupSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 z-10 bg-background border border-t-0 rounded-b-lg shadow-lg max-h-48 overflow-y-auto">
+                        {pickupSuggestions.map((suggestion) => (
+                          <button
+                            key={suggestion.id}
+                            className="w-full text-left px-3 py-2 hover:bg-muted transition-colors border-b last:border-b-0"
+                            onClick={() => selectPickupSuggestion(suggestion)}
+                          >
+                            {suggestion.description}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-          {/* Dropoff Location */}
-          <div className="relative">
-            <label className="text-sm font-medium mb-2 block">
-              Destination
-            </label>
-            <Input
-              placeholder="Enter destination address..."
-              value={dropoff}
-              onChange={(e) => handleDropoffSearch(e.target.value)}
-              onFocus={() => dropoff.length >= 3 && setShowDropoffSuggestions(true)}
-            />
+                {/* Dropoff Location */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-red-600" />
+                    Destination
+                  </label>
+                  <div className="relative">
+                    <Input
+                      placeholder="Enter destination address"
+                      value={dropoff}
+                      onChange={(e) => handleDropoffChange(e.target.value)}
+                      className="pl-3"
+                    />
+                    {dropoffSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 z-10 bg-background border border-t-0 rounded-b-lg shadow-lg max-h-48 overflow-y-auto">
+                        {dropoffSuggestions.map((suggestion) => (
+                          <button
+                            key={suggestion.id}
+                            className="w-full text-left px-3 py-2 hover:bg-muted transition-colors border-b last:border-b-0"
+                            onClick={() => selectDropoffSuggestion(suggestion)}
+                          >
+                            {suggestion.description}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
             
-            {/* Dropoff Suggestions */}
-            {showDropoffSuggestions && dropoffSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                {dropoffSuggestions.map((suggestion) => (
-                  <button
-                    key={suggestion.id}
-                    className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
-                    onClick={() => selectDropoffLocation(suggestion)}
+            <TabsContent value="map" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={locationSelectionMode === 'pickup' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setLocationSelectionMode('pickup')}
+                    className="flex items-center gap-2"
                   >
-                    {suggestion.description}
-                  </button>
-                ))}
+                    <MapPin className="h-4 w-4 text-green-600" />
+                    Select Pickup
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={locationSelectionMode === 'dropoff' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setLocationSelectionMode('dropoff')}
+                    className="flex items-center gap-2"
+                  >
+                    <MapPin className="h-4 w-4 text-red-600" />
+                    Select Dropoff
+                  </Button>
+                </div>
+                
+                <Map
+                  onLocationSelect={handleMapLocationSelect}
+                  pickupLocation={mapPickupLocation}
+                  dropoffLocation={mapDropoffLocation}
+                  height="400px"
+                />
+                
+                {(mapPickupLocation || mapDropoffLocation) && (
+                  <div className="space-y-2 text-sm">
+                    {mapPickupLocation && (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <MapPin className="h-4 w-4" />
+                        Pickup: {mapPickupLocation.address}
+                      </div>
+                    )}
+                    {mapDropoffLocation && (
+                      <div className="flex items-center gap-2 text-red-600">
+                        <MapPin className="h-4 w-4" />
+                        Dropoff: {mapDropoffLocation.address}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </TabsContent>
+          </Tabs>
 
-          {/* Ride Type */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Ride Type
-            </label>
-            <Select value={rideType} onValueChange={setRideType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="standard">Standard</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
-                <SelectItem value="shared">Shared Ride</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Ride Options */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Ride Type */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Ride Type</label>
+              <Select value={rideType} onValueChange={setRideType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="shared">Shared</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Payment Method */}
-          <div>
-            <label className="text-sm font-medium mb-3 block">
-              Payment Method
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              <Card
-                className={`cursor-pointer transition-all ${
-                  paymentMethod === "card"
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-muted-foreground"
-                }`}
-                onClick={() => setPaymentMethod("card")}
-              >
-                <CardContent className="p-4 text-center">
-                  <CreditCard className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <p className="font-medium">Credit Card</p>
-                  <p className="text-xs text-muted-foreground">Secure payment</p>
-                </CardContent>
-              </Card>
-              
-              <Card
-                className={`cursor-pointer transition-all ${
-                  paymentMethod === "cash"
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-muted-foreground"
-                }`}
-                onClick={() => setPaymentMethod("cash")}
-              >
-                <CardContent className="p-4 text-center">
-                  <Banknote className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <p className="font-medium">Cash</p>
-                  <p className="text-xs text-muted-foreground">Pay driver directly</p>
-                </CardContent>
-              </Card>
+            {/* Payment Method */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Payment Method</label>
+              <Select value={paymentMethod} onValueChange={(value: 'card' | 'cash') => setPaymentMethod(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="card">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Credit Card
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="cash">
+                    <div className="flex items-center gap-2">
+                      <Banknote className="h-4 w-4" />
+                      Cash
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Additional Notes (Optional)
-            </label>
+          {/* Additional Notes */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Additional Notes (Optional)</label>
             <Textarea
               placeholder="Any special instructions for your driver..."
               value={riderNotes}
@@ -415,6 +439,42 @@ export default function RideBooking({ profileId, onRideRequested }: RideBookingP
               rows={3}
             />
           </div>
+
+          {/* Fare Estimate */}
+          {fareEstimate && (
+            <Card className="bg-muted/20">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <h3 className="font-semibold mb-2 flex items-center justify-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Estimated Fare
+                  </h3>
+                  {estimating ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Calculating...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-primary mb-2">
+                        ${fareEstimate.min_fare.toFixed(2)} - ${fareEstimate.max_fare.toFixed(2)}
+                      </div>
+                      <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          <span>{fareEstimate.estimated_distance.toFixed(1)} miles</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          <span>~{fareEstimate.estimated_duration} mins</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Submit Button */}
           <Button
@@ -435,45 +495,6 @@ export default function RideBooking({ profileId, onRideRequested }: RideBookingP
         </CardContent>
       </Card>
 
-      {/* Fare Estimate */}
-      {fareEstimate && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h3 className="font-semibold mb-2 flex items-center justify-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Estimated Fare
-              </h3>
-              {estimating ? (
-                <div className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Calculating...</span>
-                </div>
-              ) : (
-                <>
-                  <div className="text-3xl font-bold text-primary mb-2">
-                    ${fareEstimate.min_fare.toFixed(2)} - ${fareEstimate.max_fare.toFixed(2)}
-                  </div>
-                  <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{fareEstimate.estimated_distance.toFixed(1)} miles</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>~{fareEstimate.estimated_duration} mins</span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Final price negotiated with drivers. Estimates based on distance and current demand.
-                  </p>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Help Card */}
       <Card>
         <CardContent className="p-4">
@@ -482,10 +503,10 @@ export default function RideBooking({ profileId, onRideRequested }: RideBookingP
             <div className="text-sm">
               <p className="font-medium mb-1">How it works:</p>
               <ul className="text-muted-foreground space-y-1">
-                <li>• Enter your pickup and destination</li>
+                <li>• Enter your pickup and destination using the form or interactive map</li>
+                <li>• Get an estimated fare based on distance</li>
                 <li>• Drivers will see your request and submit offers</li>
-                <li>• Choose the best offer or negotiate once</li>
-                <li>• Your driver will arrive at the pickup location</li>
+                <li>• Choose the best offer and enjoy your ride!</li>
               </ul>
             </div>
           </div>
