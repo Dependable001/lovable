@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, Users, Car, DollarSign, AlertTriangle, LogOut } from "lucide-react";
+import { Shield, Users, Car, DollarSign, AlertTriangle, LogOut, FileCheck, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
+import ApplicationReviewDetail from "@/components/admin/ApplicationReviewDetail";
 
 interface Profile {
   id: string;
@@ -31,17 +32,65 @@ interface Ride {
   driver: { full_name: string; email: string } | null;
 }
 
+interface DriverApplication {
+  id: string;
+  status: string;
+  created_at: string;
+  date_of_birth: string;
+  phone_number: string;
+  address: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  has_criminal_record: boolean;
+  criminal_record_details?: string;
+  driving_experience_years: number;
+  previous_violations?: string;
+  rejection_reason?: string;
+  driver: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
+  vehicle?: {
+    make: string;
+    model: string;
+    year: number;
+    color: string;
+    license_plate: string;
+    vin: string;
+    vehicle_type: string;
+    seats: number;
+  } | null;
+}
+
+interface DriverDocument {
+  id: string;
+  document_type: string;
+  document_url: string;
+  status: string;
+  created_at: string;
+  verified_at?: string;
+  notes?: string;
+}
+
 export default function Admin() {
   const { user, loading, signOut } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [users, setUsers] = useState<Profile[]>([]);
   const [rides, setRides] = useState<Ride[]>([]);
+  const [driverApplications, setDriverApplications] = useState<DriverApplication[]>([]);
+  const [selectedApplication, setSelectedApplication] = useState<DriverApplication | null>(null);
+  const [applicationDocuments, setApplicationDocuments] = useState<DriverDocument[]>([]);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalDrivers: 0,
     totalRiders: 0,
     totalRides: 0,
-    totalRevenue: 0
+    totalRevenue: 0,
+    pendingApplications: 0
   });
 
   // Check if user is admin
@@ -56,6 +105,7 @@ export default function Admin() {
     if (profile?.role === 'admin') {
       fetchUsers();
       fetchRides();
+      fetchDriverApplications();
       fetchStats();
     }
   }, [profile]);
@@ -108,15 +158,91 @@ export default function Admin() {
     }
   };
 
+  const fetchDriverApplications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('driver_applications')
+        .select(`
+          *,
+          driver:profiles!driver_applications_driver_id_fkey(id, full_name, email)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      // Fetch vehicle info separately for each driver
+      const applicationsWithVehicles = await Promise.all((data || []).map(async (app: any) => {
+        const { data: vehicleData } = await supabase
+          .from('vehicles')
+          .select('*')
+          .eq('driver_id', app.driver.id)
+          .single();
+        
+        return {
+          ...app,
+          vehicle: vehicleData
+        };
+      }));
+      
+      setDriverApplications(applicationsWithVehicles as DriverApplication[]);
+    } catch (error) {
+      console.error('Error fetching driver applications:', error);
+    }
+  };
+
+  const fetchApplicationDocuments = async (driverId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('driver_documents')
+        .select('*')
+        .eq('driver_id', driverId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setApplicationDocuments(data || []);
+    } catch (error) {
+      console.error('Error fetching application documents:', error);
+    }
+  };
+
+  const updateApplicationStatus = async (applicationId: string, status: string, rejectionReason?: string) => {
+    try {
+      const updateData: any = {
+        status,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: profile?.id,
+      };
+
+      if (rejectionReason) {
+        updateData.rejection_reason = rejectionReason;
+      }
+
+      const { error } = await supabase
+        .from('driver_applications')
+        .update(updateData)
+        .eq('id', applicationId);
+
+      if (error) throw error;
+
+      // Refresh applications
+      fetchDriverApplications();
+      setSelectedApplication(null);
+    } catch (error) {
+      console.error('Error updating application status:', error);
+    }
+  };
+
   const fetchStats = async () => {
     try {
-      const [usersRes, ridesRes] = await Promise.all([
+      const [usersRes, ridesRes, applicationsRes] = await Promise.all([
         supabase.from('profiles').select('role'),
-        supabase.from('rides').select('final_fare, status')
+        supabase.from('rides').select('final_fare, status'),
+        supabase.from('driver_applications').select('status')
       ]);
 
       const users = usersRes.data || [];
       const rides = ridesRes.data || [];
+      const applications = applicationsRes.data || [];
 
       const totalUsers = users.length;
       const totalDrivers = users.filter(u => u.role === 'driver').length;
@@ -125,13 +251,15 @@ export default function Admin() {
       const totalRevenue = rides
         .filter(r => r.status === 'completed' && r.final_fare)
         .reduce((sum, r) => sum + Number(r.final_fare), 0);
+      const pendingApplications = applications.filter(a => a.status === 'pending' || a.status === 'documents_submitted').length;
 
       setStats({
         totalUsers,
         totalDrivers,
         totalRiders,
         totalRides,
-        totalRevenue
+        totalRevenue,
+        pendingApplications
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -202,7 +330,7 @@ export default function Admin() {
 
       <div className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -252,15 +380,103 @@ export default function Admin() {
               <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Applications</CardTitle>
+              <FileCheck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pendingApplications}</div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Content Tabs */}
-        <Tabs defaultValue="users" className="space-y-6">
+        <Tabs defaultValue="applications" className="space-y-6">
           <TabsList>
+            <TabsTrigger value="applications">Driver Applications</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="rides">Rides</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="applications">
+            {selectedApplication ? (
+              <ApplicationReviewDetail 
+                application={selectedApplication}
+                documents={applicationDocuments}
+                onBack={() => setSelectedApplication(null)}
+                onApprove={() => updateApplicationStatus(selectedApplication.id, 'approved')}
+                onReject={(reason: string) => updateApplicationStatus(selectedApplication.id, 'rejected', reason)}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Driver Applications</CardTitle>
+                  <CardDescription>Review and approve driver applications</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Driver</TableHead>
+                        <TableHead>Applied</TableHead>
+                        <TableHead>Experience</TableHead>
+                        <TableHead>Vehicle</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {driverApplications.map((application) => (
+                        <TableRow key={application.id}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{application.driver.full_name}</div>
+                              <div className="text-sm text-muted-foreground">{application.driver.email}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{new Date(application.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>{application.driving_experience_years} years</TableCell>
+                          <TableCell>
+                            {application.vehicle ? 
+                              `${application.vehicle.year} ${application.vehicle.make} ${application.vehicle.model}` :
+                              'Not provided'
+                            }
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={
+                                application.status === 'approved' ? 'default' :
+                                application.status === 'rejected' ? 'destructive' :
+                                'secondary'
+                              }
+                            >
+                              {application.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedApplication(application);
+                                fetchApplicationDocuments(application.driver.id);
+                              }}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              Review
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
 
           <TabsContent value="users">
             <Card>

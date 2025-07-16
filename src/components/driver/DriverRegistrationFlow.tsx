@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, FileText, Shield, Car, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, Upload, FileText, Shield, Car, CheckCircle, AlertCircle, Camera, User } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface DriverRegistrationFlowProps {
@@ -47,9 +47,10 @@ interface Vehicle {
 const STEPS = [
   { id: 1, title: "Personal Information", icon: FileText },
   { id: 2, title: "Vehicle Information", icon: Car },
-  { id: 3, title: "Document Upload", icon: Upload },
-  { id: 4, title: "Background Check Consent", icon: Shield },
-  { id: 5, title: "Terms & Conditions", icon: CheckCircle },
+  { id: 3, title: "Profile & Selfie Verification", icon: Upload },
+  { id: 4, title: "Document Upload", icon: FileText },
+  { id: 5, title: "Background Check Consent", icon: Shield },
+  { id: 6, title: "Terms & Conditions", icon: CheckCircle },
 ];
 
 export default function DriverRegistrationFlow({ profileId, onComplete }: DriverRegistrationFlowProps) {
@@ -85,6 +86,34 @@ export default function DriverRegistrationFlow({ profileId, onComplete }: Driver
 
   const [uploadedDocuments, setUploadedDocuments] = useState<{[key: string]: File}>({});
   const { toast } = useToast();
+
+  const uploadDocuments = async () => {
+    const uploadPromises = Object.entries(uploadedDocuments).map(async ([docType, file]) => {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${profileId}/${docType}.${fileExt}`;
+      const bucket = docType === 'profile_picture' || docType === 'selfie_verification' 
+        ? 'driver-verification' 
+        : 'driver-documents';
+      
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, file, { upsert: true });
+      
+      if (error) throw error;
+
+      // Create document record in database
+      await supabase
+        .from('driver_documents')
+        .insert({
+          driver_id: profileId,
+          document_type: docType,
+          document_url: `${bucket}/${fileName}`,
+          status: 'pending'
+        });
+    });
+
+    await Promise.all(uploadPromises);
+  };
 
   const progress = (currentStep / STEPS.length) * 100;
 
@@ -128,8 +157,8 @@ export default function DriverRegistrationFlow({ profileId, onComplete }: Driver
 
       if (vehicleError) throw vehicleError;
 
-      // TODO: Upload documents to storage
-      // This would require implementing file storage
+      // Upload documents to Supabase storage
+      await uploadDocuments();
       
       toast({
         title: "Application Submitted!",
@@ -173,13 +202,18 @@ export default function DriverRegistrationFlow({ profileId, onComplete }: Driver
         );
       case 3:
         return (
+          uploadedDocuments.profile_picture &&
+          uploadedDocuments.selfie_verification
+        );
+      case 4:
+        return (
           uploadedDocuments.drivers_license &&
           uploadedDocuments.vehicle_registration &&
           uploadedDocuments.insurance
         );
-      case 4:
-        return application.background_check_consent;
       case 5:
+        return application.background_check_consent;
+      case 6:
         return application.terms_accepted;
       default:
         return false;
@@ -193,10 +227,12 @@ export default function DriverRegistrationFlow({ profileId, onComplete }: Driver
       case 2:
         return <VehicleInformationStep vehicle={vehicle} setVehicle={setVehicle} />;
       case 3:
-        return <DocumentUploadStep uploadedDocuments={uploadedDocuments} setUploadedDocuments={setUploadedDocuments} />;
+        return <ProfileVerificationStep uploadedDocuments={uploadedDocuments} setUploadedDocuments={setUploadedDocuments} />;
       case 4:
-        return <BackgroundCheckStep application={application} setApplication={setApplication} />;
+        return <DocumentUploadStep uploadedDocuments={uploadedDocuments} setUploadedDocuments={setUploadedDocuments} />;
       case 5:
+        return <BackgroundCheckStep application={application} setApplication={setApplication} />;
+      case 6:
         return <TermsAndConditionsStep application={application} setApplication={setApplication} />;
       default:
         return null;
@@ -539,7 +575,110 @@ function VehicleInformationStep({
   );
 }
 
-function DocumentUploadStep({ 
+function ProfileVerificationStep({ 
+  uploadedDocuments, 
+  setUploadedDocuments 
+}: { 
+  uploadedDocuments: {[key: string]: File}; 
+  setUploadedDocuments: (docs: {[key: string]: File}) => void; 
+}) {
+  const handleFileUpload = (documentType: string, file: File | null) => {
+    if (file) {
+      setUploadedDocuments({ ...uploadedDocuments, [documentType]: file });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold">Profile & Selfie Verification</h3>
+        <p className="text-sm text-muted-foreground">
+          For security and safety, we require a clear profile picture and selfie verification.
+        </p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Profile Picture */}
+        <div className="border rounded-lg p-6 text-center">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center">
+              {uploadedDocuments.profile_picture ? (
+                <CheckCircle className="w-10 h-10 text-green-500" />
+              ) : (
+                <User className="w-10 h-10 text-muted-foreground" />
+              )}
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium">Profile Picture</h4>
+              <p className="text-sm text-muted-foreground">
+                Upload a clear headshot photo that shows your face clearly
+              </p>
+            </div>
+            <Input
+              type="file"
+              accept=".jpg,.jpeg,.png"
+              onChange={(e) => handleFileUpload('profile_picture', e.target.files?.[0] || null)}
+              className="w-auto"
+            />
+            {uploadedDocuments.profile_picture && (
+              <p className="text-sm text-green-600">
+                ✓ {uploadedDocuments.profile_picture.name}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Selfie Verification */}
+        <div className="border rounded-lg p-6 text-center">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center">
+              {uploadedDocuments.selfie_verification ? (
+                <CheckCircle className="w-10 h-10 text-green-500" />
+              ) : (
+                <Camera className="w-10 h-10 text-muted-foreground" />
+              )}
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium">Selfie Verification</h4>
+              <p className="text-sm text-muted-foreground">
+                Take a selfie holding your driver's license next to your face
+              </p>
+            </div>
+            <Input
+              type="file"
+              accept=".jpg,.jpeg,.png"
+              onChange={(e) => handleFileUpload('selfie_verification', e.target.files?.[0] || null)}
+              className="w-auto"
+            />
+            {uploadedDocuments.selfie_verification && (
+              <p className="text-sm text-green-600">
+                ✓ {uploadedDocuments.selfie_verification.name}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start space-x-2">
+          <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+          <div className="space-y-2">
+            <h4 className="font-medium text-blue-800">Photo Requirements:</h4>
+            <ul className="text-sm text-blue-700 space-y-1">
+              <li>• Photos must be clear and well-lit</li>
+              <li>• Face must be clearly visible (no sunglasses, hats, or masks)</li>
+              <li>• For selfie: hold your driver's license beside your face</li>
+              <li>• Both your face and license should be clearly visible in the selfie</li>
+              <li>• Accepted formats: JPG, PNG (max 10MB each)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DocumentUploadStep({
   uploadedDocuments, 
   setUploadedDocuments 
 }: { 
