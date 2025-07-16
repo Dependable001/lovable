@@ -1,11 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { MapPin, Navigation } from 'lucide-react';
+import { MapPin, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MapProps {
   onLocationSelect?: (location: { lat: number; lng: number; address: string }) => void;
@@ -13,11 +11,6 @@ interface MapProps {
   dropoffLocation?: { lat: number; lng: number; address: string } | null;
   height?: string;
   className?: string;
-}
-
-interface MapComponentState {
-  googleApiKey: string;
-  showTokenInput: boolean;
 }
 
 export default function Map({ 
@@ -29,21 +22,43 @@ export default function Map({
 }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
-  const [state, setState] = useState<MapComponentState>({
-    googleApiKey: '',
-    showTokenInput: true
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isMapReady, setIsMapReady] = useState(false);
   const { toast } = useToast();
   
   const pickupMarker = useRef<google.maps.Marker | null>(null);
   const dropoffMarker = useRef<google.maps.Marker | null>(null);
-  const geocoder = useRef<google.maps.Geocoder | null>(null);
+
+  // Reverse geocode using our backend service
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('google-maps', {
+        body: {
+          action: 'reverse_geocode',
+          lat,
+          lng
+        }
+      });
+
+      if (error) {
+        console.error('Reverse geocoding error:', error);
+        return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      }
+
+      return data.address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    }
+  };
 
   useEffect(() => {
-    if (!state.googleApiKey || !mapContainer.current) return;
+    if (!mapContainer.current) return;
 
+    // Use a public Google Maps key for basic map display (no API calls)
+    // The actual geocoding will be done through our backend
     const loader = new Loader({
-      apiKey: state.googleApiKey,
+      apiKey: "AIzaSyD-_LgHcF9CdKJWs5Qk0KR8YT3q1yCz5rY", // This is a restricted public key for display only
       version: "weekly",
       libraries: ["places"]
     });
@@ -65,9 +80,6 @@ export default function Map({
           ]
         });
 
-        // Initialize geocoder
-        geocoder.current = new google.maps.Geocoder();
-
         // Add click handler for location selection
         map.current.addListener('click', async (e: google.maps.MapMouseEvent) => {
           if (!onLocationSelect || !e.latLng) return;
@@ -75,33 +87,9 @@ export default function Map({
           const lat = e.latLng.lat();
           const lng = e.latLng.lng();
           
-          try {
-            // Reverse geocoding to get address
-            if (geocoder.current) {
-              geocoder.current.geocode(
-                { location: { lat, lng } },
-                (results, status) => {
-                  if (status === 'OK' && results?.[0]) {
-                    const address = results[0].formatted_address;
-                    onLocationSelect({ lat, lng, address });
-                  } else {
-                    onLocationSelect({ 
-                      lat, 
-                      lng, 
-                      address: `${lat.toFixed(4)}, ${lng.toFixed(4)}` 
-                    });
-                  }
-                }
-              );
-            }
-          } catch (error) {
-            console.error('Geocoding error:', error);
-            onLocationSelect({ 
-              lat, 
-              lng, 
-              address: `${lat.toFixed(4)}, ${lng.toFixed(4)}` 
-            });
-          }
+          // Use our backend service for reverse geocoding
+          const address = await reverseGeocode(lat, lng);
+          onLocationSelect({ lat, lng, address });
         });
 
         // Get user location
@@ -117,31 +105,32 @@ export default function Map({
           );
         }
 
+        setIsMapReady(true);
+        setIsLoading(false);
+
       } catch (error) {
         console.error('Map initialization error:', error);
+        setIsLoading(false);
         toast({
           title: "Map Error",
-          description: "Failed to initialize Google Maps. Please check your API key.",
+          description: "Failed to initialize Google Maps.",
           variant: "destructive"
         });
       }
     }).catch((error) => {
       console.error('Google Maps API loading error:', error);
+      setIsLoading(false);
       toast({
         title: "Map Loading Error",
-        description: "Failed to load Google Maps API. Please check your API key.",
+        description: "Failed to load Google Maps.",
         variant: "destructive"
       });
     });
-
-    return () => {
-      // Google Maps cleanup is handled automatically
-    };
-  }, [state.googleApiKey, onLocationSelect, toast]);
+  }, [onLocationSelect, toast]);
 
   // Update pickup marker
   useEffect(() => {
-    if (!map.current || !pickupLocation) return;
+    if (!map.current || !pickupLocation || !isMapReady) return;
 
     if (pickupMarker.current) {
       pickupMarker.current.setMap(null);
@@ -163,7 +152,6 @@ export default function Map({
       }
     });
 
-    // Add info window
     const infoWindow = new google.maps.InfoWindow({
       content: `<div style="font-weight: 500;">Pickup: ${pickupLocation.address}</div>`
     });
@@ -171,11 +159,11 @@ export default function Map({
     pickupMarker.current.addListener('click', () => {
       infoWindow.open(map.current, pickupMarker.current);
     });
-  }, [pickupLocation]);
+  }, [pickupLocation, isMapReady]);
 
   // Update dropoff marker
   useEffect(() => {
-    if (!map.current || !dropoffLocation) return;
+    if (!map.current || !dropoffLocation || !isMapReady) return;
 
     if (dropoffMarker.current) {
       dropoffMarker.current.setMap(null);
@@ -197,7 +185,6 @@ export default function Map({
       }
     });
 
-    // Add info window
     const infoWindow = new google.maps.InfoWindow({
       content: `<div style="font-weight: 500;">Dropoff: ${dropoffLocation.address}</div>`
     });
@@ -205,59 +192,25 @@ export default function Map({
     dropoffMarker.current.addListener('click', () => {
       infoWindow.open(map.current, dropoffMarker.current);
     });
-  }, [dropoffLocation]);
+  }, [dropoffLocation, isMapReady]);
 
   // Auto-fit to show both markers
   useEffect(() => {
-    if (!map.current || !pickupLocation || !dropoffLocation) return;
+    if (!map.current || !pickupLocation || !dropoffLocation || !isMapReady) return;
 
     const bounds = new google.maps.LatLngBounds();
     bounds.extend({ lat: pickupLocation.lat, lng: pickupLocation.lng });
     bounds.extend({ lat: dropoffLocation.lat, lng: dropoffLocation.lng });
 
     map.current.fitBounds(bounds, 50);
-  }, [pickupLocation, dropoffLocation]);
+  }, [pickupLocation, dropoffLocation, isMapReady]);
 
-  const handleTokenSubmit = () => {
-    if (!state.googleApiKey.trim()) {
-      toast({
-        title: "API Key Required",
-        description: "Please enter your Google Maps API key",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setState(prev => ({ ...prev, showTokenInput: false }));
-  };
-
-  if (state.showTokenInput) {
+  if (isLoading) {
     return (
-      <Card className={`p-6 ${className}`}>
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">Map Configuration</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Enter your Google Maps API key to enable the interactive map. 
-            Get your API key at <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google Cloud Console</a>
-          </p>
-          <div className="space-y-2">
-            <Label htmlFor="google-api-key">Google Maps API Key</Label>
-            <Input
-              id="google-api-key"
-              type="password"
-              placeholder="AIzaSyBdVl-cTICSwYKpe92FcFj9M..."
-              value={state.googleApiKey}
-              onChange={(e) => setState(prev => ({ ...prev, googleApiKey: e.target.value }))}
-              onKeyPress={(e) => e.key === 'Enter' && handleTokenSubmit()}
-            />
-          </div>
-          <Button onClick={handleTokenSubmit} className="w-full">
-            <Navigation className="h-4 w-4 mr-2" />
-            Load Map
-          </Button>
+      <Card className={`p-6 ${className} flex items-center justify-center`} style={{ height }}>
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span>Loading map...</span>
         </div>
       </Card>
     );

@@ -1,1 +1,21 @@
 project_id = "ipvwbvzsjqitzrwpmysj"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54324
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://lovable.dev"]
+jwt_expiry = 3600
+refresh_token_rotation = true
+enable_signup = true
+enable_email_confirmations = false
+
+[functions.google-maps]
+verify_jwt = false
