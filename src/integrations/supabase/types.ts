@@ -331,58 +331,162 @@ export type Database = {
           },
         ]
       }
-      rides: {
+      ride_requests: {
         Row: {
-          created_at: string | null
-          driver_id: string | null
+          created_at: string
           dropoff_lat: number | null
           dropoff_lng: number | null
           dropoff_location: string
+          estimated_distance_miles: number | null
+          estimated_duration_minutes: number | null
           estimated_fare_max: number | null
           estimated_fare_min: number | null
+          expires_at: string | null
+          id: string
+          payment_method: string | null
+          pickup_lat: number | null
+          pickup_lng: number | null
+          pickup_location: string
+          ride_type: string | null
+          rider_id: string
+          rider_notes: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          dropoff_location: string
+          estimated_distance_miles?: number | null
+          estimated_duration_minutes?: number | null
+          estimated_fare_max?: number | null
+          estimated_fare_min?: number | null
+          expires_at?: string | null
+          id?: string
+          payment_method?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          pickup_location: string
+          ride_type?: string | null
+          rider_id: string
+          rider_notes?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          dropoff_location?: string
+          estimated_distance_miles?: number | null
+          estimated_duration_minutes?: number | null
+          estimated_fare_max?: number | null
+          estimated_fare_min?: number | null
+          expires_at?: string | null
+          id?: string
+          payment_method?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          pickup_location?: string
+          ride_type?: string | null
+          rider_id?: string
+          rider_notes?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_requests_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rides: {
+        Row: {
+          accepted_at: string | null
+          completed_at: string | null
+          created_at: string | null
+          distance_miles: number | null
+          driver_id: string | null
+          driver_notes: string | null
+          dropoff_lat: number | null
+          dropoff_lng: number | null
+          dropoff_location: string
+          duration_minutes: number | null
+          estimated_fare_max: number | null
+          estimated_fare_min: number | null
+          fare_breakdown: Json | null
           final_fare: number | null
           id: string
           payment_method: string | null
           pickup_lat: number | null
           pickup_lng: number | null
           pickup_location: string
+          requested_at: string | null
+          ride_type: string | null
           rider_id: string
+          rider_notes: string | null
+          started_at: string | null
           status: string | null
           updated_at: string | null
         }
         Insert: {
+          accepted_at?: string | null
+          completed_at?: string | null
           created_at?: string | null
+          distance_miles?: number | null
           driver_id?: string | null
+          driver_notes?: string | null
           dropoff_lat?: number | null
           dropoff_lng?: number | null
           dropoff_location: string
+          duration_minutes?: number | null
           estimated_fare_max?: number | null
           estimated_fare_min?: number | null
+          fare_breakdown?: Json | null
           final_fare?: number | null
           id?: string
           payment_method?: string | null
           pickup_lat?: number | null
           pickup_lng?: number | null
           pickup_location: string
+          requested_at?: string | null
+          ride_type?: string | null
           rider_id: string
+          rider_notes?: string | null
+          started_at?: string | null
           status?: string | null
           updated_at?: string | null
         }
         Update: {
+          accepted_at?: string | null
+          completed_at?: string | null
           created_at?: string | null
+          distance_miles?: number | null
           driver_id?: string | null
+          driver_notes?: string | null
           dropoff_lat?: number | null
           dropoff_lng?: number | null
           dropoff_location?: string
+          duration_minutes?: number | null
           estimated_fare_max?: number | null
           estimated_fare_min?: number | null
+          fare_breakdown?: Json | null
           final_fare?: number | null
           id?: string
           payment_method?: string | null
           pickup_lat?: number | null
           pickup_lng?: number | null
           pickup_location?: string
+          requested_at?: string | null
+          ride_type?: string | null
           rider_id?: string
+          rider_notes?: string | null
+          started_at?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -467,6 +571,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_estimated_fare: {
+        Args: { distance_miles: number }
+        Returns: {
+          min_fare: number
+          max_fare: number
+        }[]
+      }
       check_admin_permission: {
         Args: { required_permission: string; operation_type: string }
         Returns: boolean

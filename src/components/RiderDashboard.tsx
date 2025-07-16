@@ -1,82 +1,187 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ArrowLeft, MapPin, DollarSign, Clock, Star, CreditCard, Banknote, MessageCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Star, User, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import RideBooking from "@/components/rider/RideBooking";
 
 interface RiderDashboardProps {
   onBack: () => void;
 }
 
-interface DriverOffer {
+interface Profile {
   id: string;
-  driverName: string;
+  full_name: string;
+  email: string;
   rating: number;
-  price: number;
-  estimatedTime: string;
-  vehicleType: string;
-  distance: string;
+  total_ratings: number;
+}
+
+interface RideRequest {
+  id: string;
+  pickup_location: string;
+  dropoff_location: string;
+  estimated_fare_min: number;
+  estimated_fare_max: number;
+  status: string;
+  created_at: string;
+  expires_at: string;
+}
+
+interface RecentRide {
+  id: string;
+  pickup_location: string;
+  dropoff_location: string;
+  final_fare: number;
+  status: string;
+  created_at: string;
+  driver: {
+    full_name: string;
+  } | null;
 }
 
 const RiderDashboard = ({ onBack }: RiderDashboardProps) => {
-  const [pickup, setPickup] = useState("");
-  const [destination, setDestination] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("card");
-  const [showOffers, setShowOffers] = useState(false);
-  const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
-  const [counterOffer, setCounterOffer] = useState("");
-  const [showCounter, setShowCounter] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [activeRequest, setActiveRequest] = useState<RideRequest | null>(null);
+  const [recentRides, setRecentRides] = useState<RecentRide[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentView, setCurrentView] = useState<'overview' | 'booking'>('overview');
 
-  const driverOffers: DriverOffer[] = [
-    {
-      id: "1",
-      driverName: "Sarah M.",
-      rating: 4.9,
-      price: 24.50,
-      estimatedTime: "5 min",
-      vehicleType: "Toyota Camry",
-      distance: "2.3 miles"
-    },
-    {
-      id: "2", 
-      driverName: "Mike R.",
-      rating: 4.7,
-      price: 22.00,
-      estimatedTime: "7 min",
-      vehicleType: "Honda Civic",
-      distance: "2.3 miles"
-    },
-    {
-      id: "3",
-      driverName: "Alex K.",
-      rating: 4.8,
-      price: 26.00,
-      estimatedTime: "3 min",
-      vehicleType: "Tesla Model 3",
-      distance: "2.3 miles"
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+      fetchActiveRequest();
+      fetchRecentRides();
     }
-  ];
+  }, [user]);
 
-  const handleRequestRide = () => {
-    if (pickup && destination) {
-      setShowOffers(true);
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
     }
   };
 
-  const handleAcceptOffer = (offerId: string) => {
-    setSelectedOffer(offerId);
-    // Simulate ride confirmation
-    alert("Ride confirmed! Driver is on the way.");
-  };
+  const fetchActiveRequest = async () => {
+    if (!profile) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('ride_requests')
+        .select('*')
+        .eq('rider_id', profile.id)
+        .eq('status', 'searching')
+        .gt('expires_at', new Date().toISOString())
+        .single();
 
-  const handleCounterOffer = (offerId: string) => {
-    if (counterOffer) {
-      alert(`Counter offer of $${counterOffer} sent to driver!`);
-      setShowCounter(null);
-      setCounterOffer("");
+      if (error && error.code !== 'PGRST116') throw error;
+      setActiveRequest(data);
+    } catch (error) {
+      console.error('Error fetching active request:', error);
     }
   };
+
+  const fetchRecentRides = async () => {
+    if (!profile) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('rides')
+        .select(`
+          *,
+          driver:profiles!rides_driver_id_fkey(full_name)
+        `)
+        .eq('rider_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      setRecentRides(data || []);
+    } catch (error) {
+      console.error('Error fetching recent rides:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRideRequested = (requestId: string) => {
+    fetchActiveRequest(); // Refresh to show the new request
+    setCurrentView('overview'); // Return to overview
+  };
+
+  const cancelActiveRequest = async () => {
+    if (!activeRequest) return;
+
+    try {
+      const { error } = await supabase
+        .from('ride_requests')
+        .update({ status: 'cancelled' })
+        .eq('id', activeRequest.id);
+
+      if (error) throw error;
+      setActiveRequest(null);
+    } catch (error) {
+      console.error('Error cancelling request:', error);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'searching': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const timeUntilExpiry = (expiresAt: string) => {
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    const minutes = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60));
+    return Math.max(0, minutes);
+  };
+
+  if (currentView === 'booking') {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="bg-card border-b">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => setCurrentView('overview')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Book a Ride</h1>
+                <p className="text-muted-foreground">Request a ride and connect with drivers</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="container mx-auto px-4 py-8">
+          {profile && (
+            <RideBooking 
+              profileId={profile.id} 
+              onRideRequested={handleRideRequested}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,226 +192,134 @@ const RiderDashboard = ({ onBack }: RiderDashboardProps) => {
             <Button variant="ghost" size="icon" onClick={onBack}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-foreground">Rider Dashboard</h1>
-              <p className="text-muted-foreground">Request a ride and choose your driver</p>
+              <p className="text-muted-foreground">Welcome back, {profile?.full_name || 'Rider'}</p>
             </div>
+            {profile && (
+              <div className="text-right">
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-yellow-400" />
+                  <span className="font-medium">{profile.rating.toFixed(1)}</span>
+                  <span className="text-muted-foreground">({profile.total_ratings})</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        {!showOffers ? (
-          <div className="max-w-2xl mx-auto">
-            {/* Ride Request Form */}
-            <Card className="mb-8">
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Active Request */}
+          {activeRequest && (
+            <Card className="border-orange-200 bg-orange-50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-ubify-trust" />
-                  Where are you going?
+                  <Activity className="h-5 w-5 text-orange-600" />
+                  Active Ride Request
                 </CardTitle>
                 <CardDescription>
-                  Enter your pickup and destination to see available drivers
+                  Looking for drivers • Expires in {timeUntilExpiry(activeRequest.expires_at)} minutes
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent>
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Pickup Location
-                    </label>
-                    <Input
-                      placeholder="Enter pickup address..."
-                      value={pickup}
-                      onChange={(e) => setPickup(e.target.value)}
-                      className="w-full"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">From</p>
+                      <p className="font-medium">{activeRequest.pickup_location}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">To</p>
+                      <p className="font-medium">{activeRequest.dropoff_location}</p>
+                    </div>
                   </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Destination
-                    </label>
-                    <Input
-                      placeholder="Enter destination address..."
-                      value={destination}
-                      onChange={(e) => setDestination(e.target.value)}
-                      className="w-full"
-                    />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Estimated Fare</p>
+                      <p className="font-bold text-lg">
+                        ${activeRequest.estimated_fare_min.toFixed(2)} - ${activeRequest.estimated_fare_max.toFixed(2)}
+                      </p>
+                    </div>
+                    <Button variant="destructive" onClick={cancelActiveRequest}>
+                      Cancel Request
+                    </Button>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
 
-                {/* Payment Method */}
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-3 block">
-                    Payment Method
-                  </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Card
-                      className={`cursor-pointer transition-all ${
-                        paymentMethod === "card"
-                          ? "border-ubify-primary bg-ubify-primary/10"
-                          : "border-border hover:border-muted-foreground"
-                      }`}
-                      onClick={() => setPaymentMethod("card")}
-                    >
-                      <CardContent className="p-4 text-center">
-                        <CreditCard className="h-8 w-8 mx-auto mb-2 text-ubify-primary" />
-                        <p className="font-medium">Credit Card</p>
-                        <p className="text-xs text-muted-foreground">Stripe Payment</p>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card
-                      className={`cursor-pointer transition-all ${
-                        paymentMethod === "cash"
-                          ? "border-ubify-secondary bg-ubify-secondary/10"
-                          : "border-border hover:border-muted-foreground"
-                      }`}
-                      onClick={() => setPaymentMethod("cash")}
-                    >
-                      <CardContent className="p-4 text-center">
-                        <Banknote className="h-8 w-8 mx-auto mb-2 text-ubify-secondary" />
-                        <p className="font-medium">Cash</p>
-                        <p className="text-xs text-muted-foreground">Pay on delivery</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-
-                <Button
-                  variant="ubify"
-                  size="lg"
-                  className="w-full"
-                  onClick={handleRequestRide}
-                  disabled={!pickup || !destination}
-                >
-                  Find Available Drivers
-                </Button>
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setCurrentView('booking')}>
+              <CardContent className="p-6 text-center">
+                <MapPin className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <h3 className="text-lg font-semibold mb-2">Book a Ride</h3>
+                <p className="text-muted-foreground">Request a ride and connect with available drivers</p>
               </CardContent>
             </Card>
 
-            {/* Estimated Fare Range */}
             <Card>
-              <CardContent className="p-6">
-                <div className="text-center">
-                  <h3 className="font-semibold text-foreground mb-2">Estimated Fare Range</h3>
-                  <div className="text-3xl font-bold text-ubify-primary mb-2">$18 - $30</div>
-                  <p className="text-sm text-muted-foreground">
-                    Based on distance and current demand. Final price set by drivers.
-                  </p>
-                </div>
+              <CardContent className="p-6 text-center">
+                <Clock className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <h3 className="text-lg font-semibold mb-2">Schedule Later</h3>
+                <p className="text-muted-foreground">Plan your ride for a future date and time</p>
+                <Badge variant="secondary" className="mt-2">Coming Soon</Badge>
               </CardContent>
             </Card>
           </div>
-        ) : (
-          /* Driver Offers */
-          <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-foreground mb-2">Available Drivers</h2>
-              <p className="text-muted-foreground">
-                Choose from transparent offers or negotiate once for fairness
-              </p>
-            </div>
 
-            <div className="grid gap-6">
-              {driverOffers.map((offer) => (
-                <Card key={offer.id} className="border-border/50 hover:border-ubify-primary/50 transition-all">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Recent Rides */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Rides</CardTitle>
+              <CardDescription>Your last 5 completed rides</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : recentRides.length > 0 ? (
+                <div className="space-y-4">
+                  {recentRides.map((ride) => (
+                    <div key={ride.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex-1">
-                        <div className="flex items-center gap-4 mb-3">
-                          <div className="w-12 h-12 rounded-full bg-ubify-primary/20 flex items-center justify-center">
-                            <span className="font-semibold text-ubify-primary">
-                              {offer.driverName.charAt(0)}
-                            </span>
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-foreground">{offer.driverName}</h3>
-                            <div className="flex items-center gap-2">
-                              <Star className="h-4 w-4 text-ubify-secondary fill-current" />
-                              <span className="text-sm text-muted-foreground">{offer.rating}</span>
-                              <span className="text-muted-foreground">•</span>
-                              <span className="text-sm text-muted-foreground">{offer.vehicleType}</span>
-                            </div>
-                          </div>
+                        <div className="font-medium text-sm">
+                          📍 {ride.pickup_location}
                         </div>
-                        
-                        <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>{offer.estimatedTime} away</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            <span>{offer.distance}</span>
-                          </div>
+                        <div className="text-muted-foreground text-sm">
+                          🎯 {ride.dropoff_location}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {new Date(ride.created_at).toLocaleDateString()} • 
+                          {ride.driver ? ` Driver: ${ride.driver.full_name}` : ' No driver assigned'}
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-ubify-primary">
-                            ${offer.price.toFixed(2)}
+                      <div className="text-right">
+                        <Badge className={getStatusColor(ride.status)}>
+                          {ride.status}
+                        </Badge>
+                        {ride.final_fare && (
+                          <div className="font-bold text-sm mt-1">
+                            ${ride.final_fare.toFixed(2)}
                           </div>
-                          <Badge variant="outline" className="text-xs">
-                            {paymentMethod === "card" ? "Card" : "Cash"}
-                          </Badge>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            variant="ubify"
-                            size="sm"
-                            onClick={() => handleAcceptOffer(offer.id)}
-                            disabled={selectedOffer !== null}
-                          >
-                            Accept Offer
-                          </Button>
-                          
-                          {showCounter === offer.id ? (
-                            <div className="flex gap-2 items-center">
-                              <Input
-                                type="number"
-                                placeholder="$"
-                                value={counterOffer}
-                                onChange={(e) => setCounterOffer(e.target.value)}
-                                className="w-20"
-                              />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleCounterOffer(offer.id)}
-                              >
-                                Send
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setShowCounter(offer.id)}
-                              disabled={selectedOffer !== null}
-                            >
-                              Counter
-                            </Button>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Back to Search */}
-            <div className="mt-8 text-center">
-              <Button variant="ghost" onClick={() => setShowOffers(false)}>
-                ← Change pickup or destination
-              </Button>
-            </div>
-          </div>
-        )}
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No rides yet. Book your first ride to get started!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
