@@ -14,7 +14,209 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      driver_subscriptions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          driver_id: string
+          end_date: string
+          id: string
+          start_date: string | null
+          status: string | null
+          stripe_subscription_id: string | null
+          subscription_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          driver_id: string
+          end_date: string
+          id?: string
+          start_date?: string | null
+          status?: string | null
+          stripe_subscription_id?: string | null
+          subscription_type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          driver_id?: string
+          end_date?: string
+          id?: string
+          start_date?: string | null
+          status?: string | null
+          stripe_subscription_id?: string | null
+          subscription_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_subscriptions_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          rating: number | null
+          role: Database["public"]["Enums"]["user_role"]
+          total_ratings: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          rating?: number | null
+          role?: Database["public"]["Enums"]["user_role"]
+          total_ratings?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          rating?: number | null
+          role?: Database["public"]["Enums"]["user_role"]
+          total_ratings?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ride_offers: {
+        Row: {
+          counter_offer: number | null
+          created_at: string | null
+          driver_id: string
+          id: string
+          offered_fare: number
+          ride_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          counter_offer?: number | null
+          created_at?: string | null
+          driver_id: string
+          id?: string
+          offered_fare: number
+          ride_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          counter_offer?: number | null
+          created_at?: string | null
+          driver_id?: string
+          id?: string
+          offered_fare?: number
+          ride_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_offers_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ride_offers_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rides: {
+        Row: {
+          created_at: string | null
+          driver_id: string | null
+          dropoff_lat: number | null
+          dropoff_lng: number | null
+          dropoff_location: string
+          estimated_fare_max: number | null
+          estimated_fare_min: number | null
+          final_fare: number | null
+          id: string
+          payment_method: string | null
+          pickup_lat: number | null
+          pickup_lng: number | null
+          pickup_location: string
+          rider_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          driver_id?: string | null
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          dropoff_location: string
+          estimated_fare_max?: number | null
+          estimated_fare_min?: number | null
+          final_fare?: number | null
+          id?: string
+          payment_method?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          pickup_location: string
+          rider_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          driver_id?: string | null
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          dropoff_location?: string
+          estimated_fare_max?: number | null
+          estimated_fare_min?: number | null
+          final_fare?: number | null
+          id?: string
+          payment_method?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          pickup_location?: string
+          rider_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rides_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rides_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +225,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: "rider" | "driver" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +352,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["rider", "driver", "admin"],
+    },
   },
 } as const
