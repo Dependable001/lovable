@@ -53,13 +53,19 @@ const RiderDashboard = ({ onBack }: RiderDashboardProps) => {
   useEffect(() => {
     if (user) {
       fetchProfile();
-      fetchActiveRequest();
-      fetchRecentRides();
     }
   }, [user]);
 
+  useEffect(() => {
+    if (profile) {
+      fetchActiveRequest();
+      fetchRecentRides();
+    }
+  }, [profile]);
+
   const fetchProfile = async () => {
     try {
+      console.log('RiderDashboard: Fetching profile for user:', user?.id);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -67,9 +73,11 @@ const RiderDashboard = ({ onBack }: RiderDashboardProps) => {
         .single();
 
       if (error) throw error;
+      console.log('RiderDashboard: Profile fetched:', data);
       setProfile(data);
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('RiderDashboard: Error fetching profile:', error);
+      setLoading(false);
     }
   };
 
@@ -77,18 +85,20 @@ const RiderDashboard = ({ onBack }: RiderDashboardProps) => {
     if (!profile) return;
     
     try {
+      console.log('RiderDashboard: Fetching active request for profile:', profile.id);
       const { data, error } = await supabase
         .from('ride_requests')
         .select('*')
         .eq('rider_id', profile.id)
         .eq('status', 'searching')
         .gt('expires_at', new Date().toISOString())
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
+      console.log('RiderDashboard: Active request:', data);
       setActiveRequest(data);
     } catch (error) {
-      console.error('Error fetching active request:', error);
+      console.error('RiderDashboard: Error fetching active request:', error);
     }
   };
 
@@ -96,6 +106,7 @@ const RiderDashboard = ({ onBack }: RiderDashboardProps) => {
     if (!profile) return;
     
     try {
+      console.log('RiderDashboard: Fetching recent rides for profile:', profile.id);
       const { data, error } = await supabase
         .from('rides')
         .select(`
@@ -107,9 +118,10 @@ const RiderDashboard = ({ onBack }: RiderDashboardProps) => {
         .limit(5);
 
       if (error) throw error;
+      console.log('RiderDashboard: Recent rides:', data);
       setRecentRides(data || []);
     } catch (error) {
-      console.error('Error fetching recent rides:', error);
+      console.error('RiderDashboard: Error fetching recent rides:', error);
     } finally {
       setLoading(false);
     }

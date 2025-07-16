@@ -27,8 +27,8 @@ export function useAuth() {
           await fetchProfile(session.user.id);
         } else {
           setProfile(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
@@ -73,12 +73,15 @@ export function useAuth() {
 
       if (error) {
         console.error('Profile fetch error:', error);
+        setLoading(false);
         return;
       }
       console.log('Profile fetched successfully:', data);
       setProfile(data);
+      setLoading(false);
     } catch (error) {
       console.error('Error in fetchProfile:', error);
+      setLoading(false);
     }
   };
 

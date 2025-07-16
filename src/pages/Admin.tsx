@@ -112,6 +112,10 @@ export default function Admin() {
         fetchUsers();
         fetchRides();
       }, 100);
+    } else if (profile && profile.role === 'rider') {
+      console.log('User is rider, not admin');
+    } else if (profile && profile.role === 'driver') {
+      console.log('User is driver, not admin');
     }
   }, [profile]);
 
