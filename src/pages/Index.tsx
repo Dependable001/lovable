@@ -60,7 +60,7 @@ export default function Index() {
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
                 <Car className="h-8 w-8" />
-                RideShare
+                Ubify
               </Link>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-muted-foreground">
@@ -95,7 +95,7 @@ export default function Index() {
             <div className="text-center mb-8">
               <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-primary mb-4">
                 <Car className="h-8 w-8" />
-                RideShare
+                Ubify
               </Link>
             </div>
             <AuthForm onSuccess={() => setShowAuth(false)} />
@@ -119,7 +119,7 @@ export default function Index() {
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary">
               <Car className="h-8 w-8" />
-              RideShare
+              Ubify
             </Link>
             <div className="flex items-center gap-4">
               <Button variant="ghost" onClick={() => setShowAuth(true)}>
@@ -138,11 +138,11 @@ export default function Index() {
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
-              Your Ride, Your Way
+              Decentralized Ride-Hailing
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Connect with drivers in your area for safe, reliable, and affordable rides. 
-              Whether you're a rider or driver, we've got you covered.
+              Experience the future of transportation with blockchain-powered rides. 
+              Connect directly with drivers, enjoy transparent pricing, and be part of the revolution.
             </p>
             
             {/* Quick Action Cards */}
@@ -192,10 +192,10 @@ export default function Index() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Why Choose RideShare?
+              Why Choose Ubify?
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Experience the future of transportation with our cutting-edge platform
+              Experience the future of transportation with our blockchain-powered platform
             </p>
           </div>
           
@@ -204,30 +204,30 @@ export default function Index() {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="h-8 w-8 text-green-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Safe & Secure</h3>
-              <p className="text-muted-foreground">
-                All drivers are thoroughly vetted with background checks and vehicle inspections
-              </p>
+               <h3 className="text-xl font-semibold mb-2">Blockchain Security</h3>
+               <p className="text-muted-foreground">
+                 Transparent, secure transactions powered by blockchain technology with smart contracts
+               </p>
             </div>
             
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Clock className="h-8 w-8 text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Fast & Reliable</h3>
-              <p className="text-muted-foreground">
-                Quick pickup times with real-time tracking and professional drivers
-              </p>
+               <h3 className="text-xl font-semibold mb-2">Decentralized Network</h3>
+               <p className="text-muted-foreground">
+                 No middleman - direct connections between riders and drivers with fair pricing
+               </p>
             </div>
             
             <div className="text-center">
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CreditCard className="h-8 w-8 text-purple-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Easy Payment</h3>
-              <p className="text-muted-foreground">
-                Seamless cashless payments with transparent pricing and receipts
-              </p>
+               <h3 className="text-xl font-semibold mb-2">Crypto Payments</h3>
+               <p className="text-muted-foreground">
+                 Pay with cryptocurrency or traditional methods with transparent, immutable records
+               </p>
             </div>
           </div>
         </div>
@@ -265,10 +265,10 @@ export default function Index() {
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-              Ready to Get Started?
+              Join the Revolution
             </h2>
             <p className="text-lg text-primary-foreground/80 mb-8">
-              Join thousands of satisfied users who trust RideShare for their daily transportation needs
+              Be part of the decentralized future of transportation with Ubify's blockchain-powered platform
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
@@ -300,10 +300,10 @@ export default function Index() {
             <div>
               <Link to="/" className="flex items-center gap-2 text-xl font-bold text-primary mb-4">
                 <Car className="h-6 w-6" />
-                RideShare
+                Ubify
               </Link>
               <p className="text-muted-foreground text-sm">
-                The most reliable ride-sharing platform connecting riders and drivers.
+                The decentralized ride-hailing platform connecting riders and drivers through blockchain.
               </p>
             </div>
             
@@ -338,7 +338,7 @@ export default function Index() {
           <Separator className="my-8" />
           
           <div className="text-center text-sm text-muted-foreground">
-            <p>&copy; 2024 RideShare. All rights reserved.</p>
+            <p>&copy; 2024 Ubify. All rights reserved.</p>
           </div>
         </div>
       </footer>
