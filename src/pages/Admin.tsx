@@ -81,8 +81,7 @@ interface DriverDocument {
 }
 
 export default function Admin() {
-  const { user, loading, signOut } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { user, profile, loading, signOut } = useAuth();
   const [users, setUsers] = useState<Profile[]>([]);
   const [rides, setRides] = useState<Ride[]>([]);
   const [driverApplications, setDriverApplications] = useState<DriverApplication[]>([]);
@@ -97,14 +96,6 @@ export default function Admin() {
     totalRevenue: 0,
     pendingApplications: 0
   });
-
-  // Check if user is admin and fetch permissions
-  useEffect(() => {
-    if (user) {
-      console.log('Fetching profile for user:', user.id);
-      fetchProfile();
-    }
-  }, [user]);
 
   // Fetch data if admin
   useEffect(() => {
@@ -144,22 +135,6 @@ export default function Admin() {
     }
   };
 
-  const fetchProfile = async () => {
-    console.log('Starting profile fetch...');
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (error) throw error;
-      console.log('Profile fetched successfully:', data);
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    }
-  };
 
   const fetchUsers = async () => {
     try {
