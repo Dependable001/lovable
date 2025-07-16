@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_permissions: {
+        Row: {
+          admin_role: Database["public"]["Enums"]["admin_role_type"]
+          can_delete: boolean | null
+          can_read: boolean | null
+          can_write: boolean | null
+          created_at: string
+          id: string
+          permission_name: string
+        }
+        Insert: {
+          admin_role: Database["public"]["Enums"]["admin_role_type"]
+          can_delete?: boolean | null
+          can_read?: boolean | null
+          can_write?: boolean | null
+          created_at?: string
+          id?: string
+          permission_name: string
+        }
+        Update: {
+          admin_role?: Database["public"]["Enums"]["admin_role_type"]
+          can_delete?: boolean | null
+          can_read?: boolean | null
+          can_write?: boolean | null
+          created_at?: string
+          id?: string
+          permission_name?: string
+        }
+        Relationships: []
+      }
       driver_applications: {
         Row: {
           address: string
@@ -213,6 +243,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          admin_role: Database["public"]["Enums"]["admin_role_type"] | null
           created_at: string | null
           email: string
           full_name: string | null
@@ -225,6 +256,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_role?: Database["public"]["Enums"]["admin_role_type"] | null
           created_at?: string | null
           email: string
           full_name?: string | null
@@ -237,6 +269,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_role?: Database["public"]["Enums"]["admin_role_type"] | null
           created_at?: string | null
           email?: string
           full_name?: string | null
@@ -434,9 +467,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_admin_permission: {
+        Args: { required_permission: string; operation_type: string }
+        Returns: boolean
+      }
     }
     Enums: {
+      admin_role_type: "super_admin" | "operations_admin" | "support_admin"
       user_role: "rider" | "driver" | "admin"
     }
     CompositeTypes: {
@@ -565,6 +602,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_role_type: ["super_admin", "operations_admin", "support_admin"],
       user_role: ["rider", "driver", "admin"],
     },
   },

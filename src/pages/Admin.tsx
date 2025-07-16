@@ -10,12 +10,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield, Users, Car, DollarSign, AlertTriangle, LogOut, FileCheck, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import ApplicationReviewDetail from "@/components/admin/ApplicationReviewDetail";
+import AdminRoleGuard from "@/components/admin/AdminRoleGuard";
+import OngoingTripsView from "@/components/admin/OngoingTripsView";
+import RiderManagement from "@/components/admin/RiderManagement";
 
 interface Profile {
   id: string;
   email: string;
   full_name: string;
   role: string;
+  admin_role?: string;
   rating: number;
   total_ratings: number;
   created_at: string;
@@ -84,6 +88,7 @@ export default function Admin() {
   const [driverApplications, setDriverApplications] = useState<DriverApplication[]>([]);
   const [selectedApplication, setSelectedApplication] = useState<DriverApplication | null>(null);
   const [applicationDocuments, setApplicationDocuments] = useState<DriverDocument[]>([]);
+  const [adminPermissions, setAdminPermissions] = useState<{[key: string]: boolean}>({});
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalDrivers: 0,
@@ -93,7 +98,7 @@ export default function Admin() {
     pendingApplications: 0
   });
 
-  // Check if user is admin
+  // Check if user is admin and fetch permissions
   useEffect(() => {
     if (user) {
       fetchProfile();
@@ -103,12 +108,33 @@ export default function Admin() {
   // Fetch data if admin
   useEffect(() => {
     if (profile?.role === 'admin') {
+      fetchAdminPermissions();
       fetchUsers();
       fetchRides();
       fetchDriverApplications();
       fetchStats();
     }
   }, [profile]);
+
+  const fetchAdminPermissions = async () => {
+    try {
+      const permissions = ['users', 'drivers', 'riders', 'rides', 'applications', 'pricing'];
+      const permissionChecks = await Promise.all(
+        permissions.map(async (permission) => {
+          const { data } = await supabase.rpc('check_admin_permission', {
+            required_permission: permission,
+            operation_type: 'write'
+          });
+          return { [permission]: data };
+        })
+      );
+      
+      const permissionsObj = permissionChecks.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+      setAdminPermissions(permissionsObj);
+    } catch (error) {
+      console.error('Error fetching admin permissions:', error);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -318,7 +344,9 @@ export default function Admin() {
           <div className="flex items-center space-x-4">
             <div className="text-right">
               <p className="font-medium">{profile?.full_name}</p>
-              <Badge variant="secondary">Administrator</Badge>
+              <Badge variant="secondary">
+                {profile?.admin_role?.replace('_', ' ') || 'Administrator'}
+              </Badge>
             </div>
             <Button onClick={signOut} variant="outline" size="sm">
               <LogOut className="mr-2 h-4 w-4" />
@@ -393,178 +421,202 @@ export default function Admin() {
         </div>
 
         {/* Content Tabs */}
-        <Tabs defaultValue="applications" className="space-y-6">
+        <Tabs defaultValue="ongoing-trips" className="space-y-6">
           <TabsList>
+            <TabsTrigger value="ongoing-trips">Ongoing Trips</TabsTrigger>
             <TabsTrigger value="applications">Driver Applications</TabsTrigger>
+            <TabsTrigger value="riders">Rider Management</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="rides">Rides</TabsTrigger>
+            <TabsTrigger value="rides">Ride History</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="ongoing-trips">
+            <OngoingTripsView />
+          </TabsContent>
+
           <TabsContent value="applications">
-            {selectedApplication ? (
-              <ApplicationReviewDetail 
-                application={selectedApplication}
-                documents={applicationDocuments}
-                onBack={() => setSelectedApplication(null)}
-                onApprove={() => updateApplicationStatus(selectedApplication.id, 'approved')}
-                onReject={(reason: string) => updateApplicationStatus(selectedApplication.id, 'rejected', reason)}
-              />
-            ) : (
+            <AdminRoleGuard permission="applications" operation="read">
+              {selectedApplication ? (
+                <ApplicationReviewDetail 
+                  application={selectedApplication}
+                  documents={applicationDocuments}
+                  onBack={() => setSelectedApplication(null)}
+                  onApprove={() => updateApplicationStatus(selectedApplication.id, 'approved')}
+                  onReject={(reason: string) => updateApplicationStatus(selectedApplication.id, 'rejected', reason)}
+                />
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Driver Applications</CardTitle>
+                    <CardDescription>Review and approve driver applications</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Driver</TableHead>
+                          <TableHead>Applied</TableHead>
+                          <TableHead>Experience</TableHead>
+                          <TableHead>Vehicle</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {driverApplications.map((application) => (
+                          <TableRow key={application.id}>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{application.driver.full_name}</div>
+                                <div className="text-sm text-muted-foreground">{application.driver.email}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>{new Date(application.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell>{application.driving_experience_years} years</TableCell>
+                            <TableCell>
+                              {application.vehicle ? 
+                                `${application.vehicle.year} ${application.vehicle.make} ${application.vehicle.model}` :
+                                'Not provided'
+                              }
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={
+                                  application.status === 'approved' ? 'default' :
+                                  application.status === 'rejected' ? 'destructive' :
+                                  'secondary'
+                                }
+                              >
+                                {application.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedApplication(application);
+                                  fetchApplicationDocuments(application.driver.id);
+                                }}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Review
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+            </AdminRoleGuard>
+          </TabsContent>
+
+          <TabsContent value="riders">
+            <RiderManagement />
+          </TabsContent>
+
+          <TabsContent value="users">
+            <AdminRoleGuard permission="users" operation="read">
               <Card>
                 <CardHeader>
-                  <CardTitle>Driver Applications</CardTitle>
-                  <CardDescription>Review and approve driver applications</CardDescription>
+                  <CardTitle>User Management</CardTitle>
+                  <CardDescription>Manage platform users and their roles</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Driver</TableHead>
-                        <TableHead>Applied</TableHead>
-                        <TableHead>Experience</TableHead>
-                        <TableHead>Vehicle</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Admin Role</TableHead>
+                        <TableHead>Rating</TableHead>
+                        <TableHead>Joined</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {driverApplications.map((application) => (
-                        <TableRow key={application.id}>
+                      {users.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.full_name}</TableCell>
+                          <TableCell>{user.email}</TableCell>
                           <TableCell>
-                            <div>
-                              <div className="font-medium">{application.driver.full_name}</div>
-                              <div className="text-sm text-muted-foreground">{application.driver.email}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{new Date(application.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>{application.driving_experience_years} years</TableCell>
-                          <TableCell>
-                            {application.vehicle ? 
-                              `${application.vehicle.year} ${application.vehicle.make} ${application.vehicle.model}` :
-                              'Not provided'
-                            }
-                          </TableCell>
-                          <TableCell>
-                            <Badge 
-                              variant={
-                                application.status === 'approved' ? 'default' :
-                                application.status === 'rejected' ? 'destructive' :
-                                'secondary'
-                              }
-                            >
-                              {application.status}
+                            <Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'driver' ? 'default' : 'secondary'}>
+                              {user.role}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedApplication(application);
-                                fetchApplicationDocuments(application.driver.id);
-                              }}
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              Review
-                            </Button>
+                            {(user as any).admin_role && (
+                              <Badge variant="outline">
+                                {(user as any).admin_role.replace('_', ' ')}
+                              </Badge>
+                            )}
                           </TableCell>
+                          <TableCell>
+                            {user.rating.toFixed(1)} ({user.total_ratings} reviews)
+                          </TableCell>
+                          <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage platform users and their roles</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Rating</TableHead>
-                      <TableHead>Joined</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.full_name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          <Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'driver' ? 'default' : 'secondary'}>
-                            {user.role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {user.rating.toFixed(1)} ({user.total_ratings} reviews)
-                        </TableCell>
-                        <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            </AdminRoleGuard>
           </TabsContent>
 
           <TabsContent value="rides">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ride Management</CardTitle>
-                <CardDescription>Monitor and manage platform rides</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Rider</TableHead>
-                      <TableHead>Driver</TableHead>
-                      <TableHead>Route</TableHead>
-                      <TableHead>Fare</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rides.map((ride) => (
-                      <TableRow key={ride.id}>
-                        <TableCell>{ride.rider?.full_name}</TableCell>
-                        <TableCell>{ride.driver?.full_name || 'Unassigned'}</TableCell>
-                        <TableCell>
-                          <div className="max-w-xs truncate">
-                            {ride.pickup_location} → {ride.dropoff_location}
-                          </div>
-                        </TableCell>
-                        <TableCell>${ride.final_fare?.toFixed(2) || 'TBD'}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={
-                              ride.status === 'completed' ? 'default' :
-                              ride.status === 'in_progress' ? 'secondary' :
-                              ride.status === 'cancelled' ? 'destructive' :
-                              'outline'
-                            }
-                          >
-                            {ride.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{new Date(ride.created_at).toLocaleDateString()}</TableCell>
+            <AdminRoleGuard permission="rides" operation="read">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ride History</CardTitle>
+                  <CardDescription>View all completed and historical rides</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Rider</TableHead>
+                        <TableHead>Driver</TableHead>
+                        <TableHead>Route</TableHead>
+                        <TableHead>Fare</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {rides.map((ride) => (
+                        <TableRow key={ride.id}>
+                          <TableCell>{ride.rider?.full_name}</TableCell>
+                          <TableCell>{ride.driver?.full_name || 'Unassigned'}</TableCell>
+                          <TableCell>
+                            <div className="max-w-xs truncate">
+                              {ride.pickup_location} → {ride.dropoff_location}
+                            </div>
+                          </TableCell>
+                          <TableCell>${ride.final_fare?.toFixed(2) || 'TBD'}</TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={
+                                ride.status === 'completed' ? 'default' :
+                                ride.status === 'in_progress' ? 'secondary' :
+                                ride.status === 'cancelled' ? 'destructive' :
+                                'outline'
+                              }
+                            >
+                              {ride.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(ride.created_at).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </AdminRoleGuard>
           </TabsContent>
 
           <TabsContent value="reports">
