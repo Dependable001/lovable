@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Clock, 
   MapPin, 
@@ -14,11 +15,13 @@ import {
   Timer,
   X,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  CreditCard
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { PaymentForm } from "@/components/payment/PaymentForm";
 
 interface RideStatusProps {
   rideRequestId: string;
@@ -66,6 +69,7 @@ export default function RideStatus({ rideRequestId, onRequestCancelled }: RideSt
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [showPayment, setShowPayment] = useState(false);
 
   // Fetch initial ride request data
   useEffect(() => {
@@ -277,6 +281,15 @@ export default function RideStatus({ rideRequestId, onRequestCancelled }: RideSt
     }
   };
 
+  const handlePaymentSuccess = () => {
+    setShowPayment(false);
+    fetchRideRequest();
+    toast({
+      title: "Payment Successful",
+      description: "Your payment has been processed successfully!"
+    });
+  };
+
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -440,6 +453,17 @@ export default function RideStatus({ rideRequestId, onRequestCancelled }: RideSt
                 I'm Ready
               </Button>
             )}
+
+            {activeRide && activeRide.status === 'in_progress' && (
+              <Button 
+                className="flex-1" 
+                variant="outline"
+                onClick={() => setShowPayment(true)}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Complete Payment
+              </Button>
+            )}
           </div>
 
           {/* Additional Notes */}
@@ -451,6 +475,22 @@ export default function RideStatus({ rideRequestId, onRequestCancelled }: RideSt
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={showPayment} onOpenChange={setShowPayment}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete Payment</DialogTitle>
+          </DialogHeader>
+          {activeRide && (
+            <PaymentForm
+              rideId={activeRide.id}
+              amount={rideRequest.estimated_fare_max}
+              onPaymentSuccess={handlePaymentSuccess}
+              onCancel={() => setShowPayment(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
