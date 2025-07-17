@@ -464,15 +464,15 @@ export default function Admin() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {driverApplications.map((application) => (
+                        {driverApplications.filter(app => app?.driver != null).map((application) => (
                           <TableRow key={application.id}>
                             <TableCell>
                               <div>
-                                <div className="font-medium">{application.driver.full_name}</div>
-                                <div className="text-sm text-muted-foreground">{application.driver.email}</div>
+                                <div className="font-medium">{application.driver?.full_name || 'N/A'}</div>
+                                <div className="text-sm text-muted-foreground">{application.driver?.email || 'N/A'}</div>
                               </div>
                             </TableCell>
-                            <TableCell>{new Date(application.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell>{application?.created_at ? new Date(application.created_at).toLocaleDateString() : 'N/A'}</TableCell>
                             <TableCell>{application.driving_experience_years} years</TableCell>
                             <TableCell>
                               {application.vehicle ? 
@@ -496,8 +496,10 @@ export default function Admin() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => {
-                                  setSelectedApplication(application);
-                                  fetchApplicationDocuments(application.driver.id);
+                                  if (application?.driver?.id) {
+                                    setSelectedApplication(application);
+                                    fetchApplicationDocuments(application.driver.id);
+                                  }
                                 }}
                               >
                                 <Eye className="w-4 h-4 mr-2" />
@@ -538,26 +540,26 @@ export default function Admin() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users.map((user) => (
+                      {users.filter(user => user != null).map((user) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-medium">{user.full_name}</TableCell>
-                          <TableCell>{user.email}</TableCell>
+                          <TableCell className="font-medium">{user?.full_name || 'N/A'}</TableCell>
+                          <TableCell>{user?.email || 'N/A'}</TableCell>
                           <TableCell>
-                            <Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'driver' ? 'default' : 'secondary'}>
-                              {user.role}
+                            <Badge variant={user?.role === 'admin' ? 'destructive' : user?.role === 'driver' ? 'default' : 'secondary'}>
+                              {user?.role || 'Unknown'}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {(user as any).admin_role && (
+                            {(user as any)?.admin_role && (
                               <Badge variant="outline">
                                 {(user as any).admin_role.replace('_', ' ')}
                               </Badge>
                             )}
                           </TableCell>
                           <TableCell>
-                            {user.rating.toFixed(1)} ({user.total_ratings} reviews)
+                            {user?.rating ? `${user.rating.toFixed(1)} (${user.total_ratings || 0} reviews)` : 'No rating'}
                           </TableCell>
-                          <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>{user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -587,9 +589,9 @@ export default function Admin() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {rides.map((ride) => (
+                      {rides.filter(ride => ride != null).map((ride) => (
                         <TableRow key={ride.id}>
-                          <TableCell>{ride.rider?.full_name}</TableCell>
+                          <TableCell>{ride.rider?.full_name || 'N/A'}</TableCell>
                           <TableCell>{ride.driver?.full_name || 'Unassigned'}</TableCell>
                           <TableCell>
                             <div className="max-w-xs truncate">
