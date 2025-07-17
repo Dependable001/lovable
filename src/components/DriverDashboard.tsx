@@ -40,21 +40,43 @@ const DriverDashboard = ({ onBack }: DriverDashboardProps) => {
 
   const fetchDriverStatus = async () => {
     try {
+      console.log('Fetching driver status for user:', user?.id);
+      
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, full_name, email, rating, total_ratings')
         .eq('user_id', user!.id)
-        .single();
+        .maybeSingle();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        throw profileError;
+      }
+      
+      if (!profileData) {
+        console.error('No profile found for user:', user?.id);
+        toast({
+          title: "Profile Not Found",
+          description: "No driver profile found. Please contact support.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log('Profile found:', profileData);
       setProfile(profileData);
 
-      const { data: applicationData } = await supabase
+      const { data: applicationData, error: appError } = await supabase
         .from('driver_applications')
         .select('*')
         .eq('driver_id', profileData.id)
         .maybeSingle();
 
+      if (appError) {
+        console.error('Application error:', appError);
+      }
+      
+      console.log('Application data:', applicationData);
       setDriverApplication(applicationData);
     } catch (error) {
       console.error('Error fetching driver status:', error);
