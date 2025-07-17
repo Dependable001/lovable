@@ -518,7 +518,9 @@ export type Database = {
           fare_breakdown: Json | null
           final_fare: number | null
           id: string
+          payment_intent_id: string | null
           payment_method: string | null
+          payment_status: string | null
           pickup_lat: number | null
           pickup_lng: number | null
           pickup_location: string
@@ -546,7 +548,9 @@ export type Database = {
           fare_breakdown?: Json | null
           final_fare?: number | null
           id?: string
+          payment_intent_id?: string | null
           payment_method?: string | null
+          payment_status?: string | null
           pickup_lat?: number | null
           pickup_lng?: number | null
           pickup_location: string
@@ -574,7 +578,9 @@ export type Database = {
           fare_breakdown?: Json | null
           final_fare?: number | null
           id?: string
+          payment_intent_id?: string | null
           payment_method?: string | null
+          payment_status?: string | null
           pickup_lat?: number | null
           pickup_lng?: number | null
           pickup_location?: string
@@ -602,6 +608,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stripe_customers: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       vehicles: {
         Row: {

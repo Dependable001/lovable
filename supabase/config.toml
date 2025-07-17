@@ -3,19 +3,55 @@ project_id = "ipvwbvzsjqitzrwpmysj"
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "graphql_public"]
+schemas = ["public", "storage"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
-[auth]
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost"
+
+[inbucket]
 enabled = true
 port = 54324
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://lovable.dev"]
-jwt_expiry = 3600
-refresh_token_rotation = true
-enable_signup = true
-enable_email_confirmations = false
 
-[functions.google-maps]
-verify_jwt = false
+[auth]
+enabled = true
+site_url = "https://dd3f156a-5ca0-42c6-a487-a071fa2dce7c.lovableproject.com"
+additional_redirect_urls = ["https://dd3f156a-5ca0-42c6-a487-a071fa2dce7c.lovableproject.com"]
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[realtime]
+enabled = true
+
+[analytics]
+enabled = true
+port = 54327
+
+[vector]
+enabled = true
+port = 54328
+
+[functions]
+enabled = true
+
+[functions.google-maps-integration]
+verify_jwt = true
+
+[functions.background-check]
+verify_jwt = true
+
+[functions.create-payment-intent]
+verify_jwt = true
+
+[functions.confirm-payment]
+verify_jwt = true
