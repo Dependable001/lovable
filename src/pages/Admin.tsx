@@ -53,6 +53,7 @@ interface DriverApplication {
   driving_experience_years: number;
   previous_violations?: string;
   rejection_reason?: string;
+  driver_id: string;
   driver: {
     id: string;
     full_name: string;
@@ -496,10 +497,9 @@ export default function Admin() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => {
-                                  if (application?.driver?.id) {
-                                    setSelectedApplication(application);
-                                    fetchApplicationDocuments(application.driver.id);
-                                  }
+                                  console.log('Review button clicked for application:', application);
+                                  setSelectedApplication(application);
+                                  fetchApplicationDocuments(application.driver_id);
                                 }}
                               >
                                 <Eye className="w-4 h-4 mr-2" />
