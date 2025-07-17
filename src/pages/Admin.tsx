@@ -186,8 +186,8 @@ export default function Admin() {
         .limit(20); // Limit initial load to improve performance
 
       if (error) throw error;
-      console.log('Applications fetched:', data?.length || 0);
-      
+      console.log('Applications fetched:', data?.length || 0, 'data:', data);
+      console.log('First application:', data?.[0]);
       // Only fetch vehicle info for applications that need it (not all at once)
       const applicationsWithVehicles = data || [];
       
