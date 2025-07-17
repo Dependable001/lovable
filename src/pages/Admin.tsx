@@ -326,7 +326,8 @@ export default function Admin() {
 
   console.log('Admin access check - Profile:', profile, 'Role:', profile?.role);
   
-  if (profile?.role !== 'admin') {
+  // Allow access if user has admin role or admin_role is set
+  if (profile?.role !== 'admin' && !profile?.admin_role) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -337,6 +338,8 @@ export default function Admin() {
               This admin panel is restricted to administrators only.
               <br />
               <small>Current role: {profile?.role || 'No role found'}</small>
+              <br />
+              <small>Admin role: {profile?.admin_role || 'No admin role found'}</small>
             </CardDescription>
           </CardHeader>
           <CardContent>
