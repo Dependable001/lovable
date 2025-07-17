@@ -62,12 +62,29 @@ export default function ActiveRides({ driverId }: ActiveRidesProps) {
   const [driverNotes, setDriverNotes] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    if (!driverId) {
+      console.error('ActiveRides: No driverId provided');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('ActiveRides: Setting up for driver', driverId);
     fetchActiveRides();
-    setupRealTimeSubscriptions();
+    const cleanup = setupRealTimeSubscriptions();
+    
+    return cleanup;
   }, [driverId]);
 
   const fetchActiveRides = async () => {
+    if (!driverId) {
+      console.error('Cannot fetch rides: No driverId');
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('Fetching active rides for driver:', driverId);
+      
       const { data, error } = await supabase
         .from('rides')
         .select(`
@@ -84,13 +101,18 @@ export default function ActiveRides({ driverId }: ActiveRidesProps) {
         .in('status', ['accepted', 'en_route', 'arrived', 'in_progress'])
         .order('accepted_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Active rides loaded:', data?.length || 0);
       setActiveRides(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching active rides:', error);
       toast({
         title: "Error",
-        description: "Failed to load active rides",
+        description: "Failed to load active rides: " + (error.message || 'Unknown error'),
         variant: "destructive"
       });
     } finally {

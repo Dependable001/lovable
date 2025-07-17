@@ -70,13 +70,30 @@ export default function AvailableRides({ driverId }: AvailableRidesProps) {
   const [submittingOffers, setSubmittingOffers] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    if (!driverId) {
+      console.error('AvailableRides: No driverId provided');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('AvailableRides: Setting up for driver', driverId);
     fetchAvailableRides();
     fetchMyOffers();
-    setupRealTimeSubscriptions();
+    const cleanup = setupRealTimeSubscriptions();
+    
+    return cleanup;
   }, [driverId]);
 
   const fetchAvailableRides = async () => {
+    if (!driverId) {
+      console.error('Cannot fetch rides: No driverId');
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('Fetching available rides for driver:', driverId);
+      
       const { data, error } = await supabase
         .from('ride_requests')
         .select(`
@@ -91,13 +108,18 @@ export default function AvailableRides({ driverId }: AvailableRidesProps) {
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Available rides loaded:', data?.length || 0);
       setRides(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching available rides:', error);
       toast({
         title: "Error",
-        description: "Failed to load available rides",
+        description: "Failed to load available rides: " + (error.message || 'Unknown error'),
         variant: "destructive"
       });
     } finally {

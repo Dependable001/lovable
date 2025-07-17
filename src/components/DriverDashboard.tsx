@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AvailableRides from "@/components/driver/AvailableRides";
 import ActiveRides from "@/components/driver/ActiveRides";
 import EarningsOverview from "@/components/driver/EarningsOverview";
+import ErrorBoundary from "@/components/ui/error-boundary";
 
 interface DriverDashboardProps {
   onBack: () => void;
@@ -24,17 +25,29 @@ interface Profile {
   total_ratings: number;
 }
 
+interface DriverApplication {
+  id: string;
+  status: string;
+  rejection_reason?: string;
+}
+
 const DriverDashboard = ({ onBack }: DriverDashboardProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [driverApplication, setDriverApplication] = useState<any>(null);
+  const [driverApplication, setDriverApplication] = useState<DriverApplication | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, redirecting...');
+      setError('Authentication required');
+      setLoading(false);
+      return;
+    }
     fetchDriverStatus();
   }, [user]);
 
@@ -141,13 +154,23 @@ const DriverDashboard = ({ onBack }: DriverDashboardProps) => {
     );
   }
 
-  if (!profile) {
+  // Add error state handling
+  if (error) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card>
           <CardContent className="p-6 text-center">
-            <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
-            <Button onClick={onBack}>Return to Main Menu</Button>
+            <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Error Loading Dashboard</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <div className="space-y-2">
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Refresh Page
+              </Button>
+              <Button variant="outline" onClick={onBack} className="w-full">
+                Return to Main Menu
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -209,15 +232,48 @@ const DriverDashboard = ({ onBack }: DriverDashboardProps) => {
           </TabsList>
           
           <TabsContent value="available" className="mt-6">
-            <AvailableRides driverId={profile.id} />
+            <ErrorBoundary fallback={
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Failed to load available rides</h3>
+                  <p className="text-muted-foreground mb-4">Please try refreshing the page</p>
+                  <Button onClick={() => window.location.reload()}>Refresh</Button>
+                </CardContent>
+              </Card>
+            }>
+              <AvailableRides driverId={profile.id} />
+            </ErrorBoundary>
           </TabsContent>
           
           <TabsContent value="active" className="mt-6">
-            <ActiveRides driverId={profile.id} />
+            <ErrorBoundary fallback={
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Failed to load active rides</h3>
+                  <p className="text-muted-foreground mb-4">Please try refreshing the page</p>
+                  <Button onClick={() => window.location.reload()}>Refresh</Button>
+                </CardContent>
+              </Card>
+            }>
+              <ActiveRides driverId={profile.id} />
+            </ErrorBoundary>
           </TabsContent>
           
           <TabsContent value="earnings" className="mt-6">
-            <EarningsOverview driverId={profile.id} />
+            <ErrorBoundary fallback={
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Failed to load earnings</h3>
+                  <p className="text-muted-foreground mb-4">Please try refreshing the page</p>
+                  <Button onClick={() => window.location.reload()}>Refresh</Button>
+                </CardContent>
+              </Card>
+            }>
+              <EarningsOverview driverId={profile.id} />
+            </ErrorBoundary>
           </TabsContent>
         </Tabs>
       </div>
