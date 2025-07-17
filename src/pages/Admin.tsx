@@ -181,7 +181,7 @@ export default function Admin() {
         .from('driver_applications')
         .select(`
           *,
-          driver:profiles!driver_applications_driver_id_fkey(id, full_name, email)
+          driver:profiles(id, full_name, email)
         `)
         .order('created_at', { ascending: false })
         .limit(20); // Limit initial load to improve performance
@@ -194,24 +194,28 @@ export default function Admin() {
       
       setDriverApplications(applicationsWithVehicles as any);
       
-      // Fetch vehicle data lazily
-      if (data && data.length > 0) {
-        setTimeout(async () => {
-          const withVehicles = await Promise.all(data.map(async (app: any) => {
-            const { data: vehicleData } = await supabase
-              .from('vehicles')
-              .select('*')
-              .eq('driver_id', app.driver.id)
-              .single();
-            
-            return {
-              ...app,
-              vehicle: vehicleData
-            };
-          }));
-          setDriverApplications(withVehicles as any);
-        }, 500);
-      }
+        // Fetch vehicle data lazily
+        if (data && data.length > 0) {
+          setTimeout(async () => {
+            const withVehicles = await Promise.all(data.map(async (app: any) => {
+              if (!app.driver || !app.driver.id) {
+                return app; // Return as-is if no driver data
+              }
+              
+              const { data: vehicleData } = await supabase
+                .from('vehicles')
+                .select('*')
+                .eq('driver_id', app.driver.id)
+                .maybeSingle(); // Use maybeSingle to avoid errors if no vehicle found
+              
+              return {
+                ...app,
+                vehicle: vehicleData
+              };
+            }));
+            setDriverApplications(withVehicles as any);
+          }, 500);
+        }
     } catch (error) {
       console.error('Error fetching driver applications:', error);
     }
