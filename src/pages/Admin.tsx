@@ -54,11 +54,11 @@ interface DriverApplication {
   previous_violations?: string;
   rejection_reason?: string;
   driver_id: string;
-  driver: {
+  driver?: {
     id: string;
     full_name: string;
     email: string;
-  };
+  } | null;
   vehicle?: {
     make: string;
     model: string;
@@ -496,8 +496,22 @@ export default function Admin() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => {
+                                onClick={async () => {
                                   console.log('Review button clicked for application:', application);
+                                  
+                                  // If driver info is missing, fetch it manually
+                                  if (!application.driver) {
+                                    const { data: driverData } = await supabase
+                                      .from('profiles')
+                                      .select('id, full_name, email')
+                                      .eq('id', application.driver_id)
+                                      .single();
+                                    
+                                    if (driverData) {
+                                      application.driver = driverData;
+                                    }
+                                  }
+                                  
                                   setSelectedApplication(application);
                                   fetchApplicationDocuments(application.driver_id);
                                 }}

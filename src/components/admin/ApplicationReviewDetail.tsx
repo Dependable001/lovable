@@ -25,11 +25,11 @@ interface DriverApplication {
   driving_experience_years: number;
   previous_violations?: string;
   rejection_reason?: string;
-  driver: {
+  driver?: {
     id: string;
     full_name: string;
     email: string;
-  };
+  } | null;
   vehicle?: {
     make: string;
     model: string;
@@ -140,8 +140,8 @@ export default function ApplicationReviewDetail({
             Back to Applications
           </Button>
           <div>
-            <h2 className="text-2xl font-bold">{application.driver.full_name}</h2>
-            <p className="text-muted-foreground">{application.driver.email}</p>
+            <h2 className="text-2xl font-bold">{application.driver?.full_name || 'Unknown Driver'}</h2>
+            <p className="text-muted-foreground">{application.driver?.email || 'No email available'}</p>
           </div>
         </div>
         <Badge 
