@@ -121,26 +121,45 @@ export default function ActiveRides({ driverId }: ActiveRidesProps) {
   };
 
   const setupRealTimeSubscriptions = () => {
-    const channel = supabase
-      .channel('active-rides-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'rides',
-          filter: `driver_id=eq.${driverId}`
-        },
-        (payload) => {
-          console.log('Active ride update:', payload);
-          fetchActiveRides();
-        }
-      )
-      .subscribe();
+    if (!driverId) {
+      console.error('Cannot setup subscriptions: No driverId');
+      return () => {};
+    }
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    console.log('Setting up real-time subscriptions for active rides, driver:', driverId);
+
+    try {
+      const channel = supabase
+        .channel(`active-rides-${driverId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'rides',
+            filter: `driver_id=eq.${driverId}`
+          },
+          (payload) => {
+            console.log('Active ride update:', payload.eventType, payload);
+            
+            // Debounce the fetch to prevent excessive calls
+            setTimeout(() => {
+              fetchActiveRides();
+            }, 100);
+          }
+        )
+        .subscribe((status) => {
+          console.log('Active rides subscription status:', status);
+        });
+
+      return () => {
+        console.log('Cleaning up active rides subscription');
+        supabase.removeChannel(channel);
+      };
+    } catch (error) {
+      console.error('Error setting up active rides subscription:', error);
+      return () => {};
+    }
   };
 
   const updateRideStatus = async (rideId: string, newStatus: string) => {

@@ -144,52 +144,80 @@ export default function AvailableRides({ driverId }: AvailableRidesProps) {
   };
 
   const setupRealTimeSubscriptions = () => {
-    // Subscribe to ride request changes
-    const requestsChannel = supabase
-      .channel('available-rides-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'ride_requests'
-        },
-        (payload) => {
-          console.log('Ride request update:', payload);
-          if (payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
-            fetchAvailableRides();
-          } else if (payload.eventType === 'INSERT') {
-            const newRequest = payload.new as any;
-            if (newRequest.status === 'searching') {
-              fetchAvailableRides();
-            }
+    if (!driverId) {
+      console.error('Cannot setup subscriptions: No driverId');
+      return () => {};
+    }
+
+    console.log('Setting up real-time subscriptions for driver:', driverId);
+
+    try {
+      // Subscribe to ride request changes
+      const requestsChannel = supabase
+        .channel(`available-rides-${driverId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'ride_requests'
+          },
+          (payload) => {
+            console.log('Ride request update:', payload.eventType, payload);
+            
+            // Debounce the fetch to prevent excessive calls
+            setTimeout(() => {
+              if (payload.eventType === 'INSERT') {
+                const newRequest = payload.new as any;
+                if (newRequest?.status === 'searching') {
+                  console.log('New ride request detected, fetching available rides');
+                  fetchAvailableRides();
+                }
+              } else if (payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
+                console.log('Ride request updated/deleted, refreshing list');
+                fetchAvailableRides();
+              }
+            }, 100);
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe((status) => {
+          console.log('Ride requests subscription status:', status);
+        });
 
-    // Subscribe to ride offer changes
-    const offersChannel = supabase
-      .channel('ride-offers-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'ride_offers',
-          filter: `driver_id=eq.${driverId}`
-        },
-        (payload) => {
-          console.log('Ride offer update:', payload);
-          fetchMyOffers();
-        }
-      )
-      .subscribe();
+      // Subscribe to ride offer changes
+      const offersChannel = supabase
+        .channel(`ride-offers-${driverId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'ride_offers',
+            filter: `driver_id=eq.${driverId}`
+          },
+          (payload) => {
+            console.log('Ride offer update:', payload.eventType, payload);
+            
+            // Debounce the fetch to prevent excessive calls
+            setTimeout(() => {
+              fetchMyOffers();
+            }, 100);
+          }
+        )
+        .subscribe((status) => {
+          console.log('Ride offers subscription status:', status);
+        });
 
-    return () => {
-      supabase.removeChannel(requestsChannel);
-      supabase.removeChannel(offersChannel);
-    };
+      // Return cleanup function
+      return () => {
+        console.log('Cleaning up real-time subscriptions');
+        supabase.removeChannel(requestsChannel);
+        supabase.removeChannel(offersChannel);
+      };
+    } catch (error) {
+      console.error('Error setting up real-time subscriptions:', error);
+      return () => {};
+    }
   };
 
   const handleRefresh = () => {
