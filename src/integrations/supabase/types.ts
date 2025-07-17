@@ -197,6 +197,57 @@ export type Database = {
           },
         ]
       }
+      driver_locations: {
+        Row: {
+          created_at: string
+          driver_id: string
+          heading: number | null
+          id: string
+          latitude: number
+          longitude: number
+          ride_id: string | null
+          speed: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          driver_id: string
+          heading?: number | null
+          id?: string
+          latitude: number
+          longitude: number
+          ride_id?: string | null
+          speed?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          heading?: number | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          ride_id?: string | null
+          speed?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_locations_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_locations_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       driver_subscriptions: {
         Row: {
           amount: number
@@ -282,6 +333,51 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      ride_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          ride_id: string
+          sender_id: string
+          sender_type: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          ride_id: string
+          sender_id: string
+          sender_type: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          ride_id?: string
+          sender_id?: string
+          sender_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_messages_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ride_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ride_offers: {
         Row: {
