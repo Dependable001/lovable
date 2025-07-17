@@ -191,7 +191,7 @@ export default function Admin() {
       // Only fetch vehicle info for applications that need it (not all at once)
       const applicationsWithVehicles = data || [];
       
-      setDriverApplications(applicationsWithVehicles as DriverApplication[]);
+      setDriverApplications(applicationsWithVehicles as any);
       
       // Fetch vehicle data lazily
       if (data && data.length > 0) {
@@ -208,7 +208,7 @@ export default function Admin() {
               vehicle: vehicleData
             };
           }));
-          setDriverApplications(withVehicles as DriverApplication[]);
+          setDriverApplications(withVehicles as any);
         }, 500);
       }
     } catch (error) {
@@ -464,7 +464,7 @@ export default function Admin() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {driverApplications.filter(app => app?.driver != null).map((application) => (
+                        {driverApplications.map((application) => (
                           <TableRow key={application.id}>
                             <TableCell>
                               <div>
