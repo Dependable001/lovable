@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
@@ -10,9 +10,34 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const initializingRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
+
+    const initialize = async () => {
+      if (initializingRef.current) return;
+      initializingRef.current = true;
+
+      try {
+        // Get initial session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        
+        console.log('Initial session:', session?.user?.id);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error getting initial session:', error);
+        if (mounted) setLoading(false);
+      }
+    };
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -20,6 +45,12 @@ export function useAuth() {
         if (!mounted) return;
         
         console.log('Auth state changed:', event, session?.user?.id);
+        
+        // Skip if this is the initial SIGNED_IN event during initialization
+        if (event === 'SIGNED_IN' && initializingRef.current && session?.user) {
+          return;
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -32,29 +63,7 @@ export function useAuth() {
       }
     );
 
-    // Get initial session only once
-    const getInitialSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!mounted) return;
-        
-        console.log('Initial session:', session?.user?.id);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        }
-      } catch (error) {
-        console.error('Error getting initial session:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    getInitialSession();
+    initialize();
 
     return () => {
       mounted = false;
