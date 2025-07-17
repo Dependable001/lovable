@@ -143,12 +143,24 @@ export default function Admin() {
 
   const fetchUsers = async () => {
     try {
+      // Check if admin has permission to view all users
+      const { data: hasPermission } = await supabase.rpc('check_admin_permission', {
+        required_permission: 'users',
+        operation_type: 'read'
+      });
+
+      if (!hasPermission) {
+        console.error('Admin does not have permission to view users');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Users fetched:', data?.length || 0);
       setUsers(data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
