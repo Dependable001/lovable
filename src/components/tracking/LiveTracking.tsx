@@ -93,7 +93,7 @@ export const LiveTracking: React.FC<LiveTrackingProps> = ({
 
   const updateLocationInDatabase = async (location: DriverLocation) => {
     try {
-      await supabase
+      await (supabase as any)
         .from('driver_locations')
         .upsert({
           driver_id: driverId,

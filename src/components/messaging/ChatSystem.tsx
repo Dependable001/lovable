@@ -52,14 +52,14 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({
 
   const fetchMessages = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('ride_messages')
         .select('*')
         .eq('ride_id', rideId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      setMessages((data as unknown as Message[]) || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
@@ -92,7 +92,7 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('ride_messages')
         .insert({
           ride_id: rideId,
