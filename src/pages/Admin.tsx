@@ -324,6 +324,8 @@ export default function Admin() {
     return <AuthForm onSuccess={() => window.location.reload()} />;
   }
 
+  console.log('Admin access check - Profile:', profile, 'Role:', profile?.role);
+  
   if (profile?.role !== 'admin') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -333,6 +335,8 @@ export default function Admin() {
             <CardTitle className="text-xl">Access Denied</CardTitle>
             <CardDescription>
               This admin panel is restricted to administrators only.
+              <br />
+              <small>Current role: {profile?.role || 'No role found'}</small>
             </CardDescription>
           </CardHeader>
           <CardContent>
