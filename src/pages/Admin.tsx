@@ -180,7 +180,7 @@ export default function Admin() {
         .from('driver_applications')
         .select(`
           *,
-          driver:profiles!driver_applications_driver_id_fkey(id, full_name, email)
+          driver:profiles(id, full_name, email)
         `)
         .order('created_at', { ascending: false })
         .limit(20); // Limit initial load to improve performance
