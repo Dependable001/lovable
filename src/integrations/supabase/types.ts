@@ -708,6 +708,10 @@ export type Database = {
         Args: { required_permission: string; operation_type: string }
         Returns: boolean
       }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       admin_role_type: "super_admin" | "operations_admin" | "support_admin"
