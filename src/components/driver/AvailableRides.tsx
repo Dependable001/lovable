@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,10 +16,13 @@ import {
   AlertCircle,
   CheckCircle,
   Timer,
-  RefreshCw
+  RefreshCw,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { formatDistanceToNow } from "date-fns";
 
 interface AvailableRidesProps {
@@ -61,6 +64,8 @@ interface RideOffer {
 
 export default function AvailableRides({ driverId }: AvailableRidesProps) {
   const { toast } = useToast();
+  const isOnline = useNetworkStatus();
+  const fetchingRef = useRef(false);
   
   const [rides, setRides] = useState<RideRequest[]>([]);
   const [myOffers, setMyOffers] = useState<RideOffer[]>([]);
@@ -77,11 +82,19 @@ export default function AvailableRides({ driverId }: AvailableRidesProps) {
     }
     
     console.log('AvailableRides: Setting up for driver', driverId);
+    
+    // Initial fetch
     fetchAvailableRides();
     fetchMyOffers();
+    
+    // Setup subscriptions with proper cleanup
     const cleanup = setupRealTimeSubscriptions();
     
-    return cleanup;
+    // Cleanup function
+    return () => {
+      console.log('AvailableRides: Cleaning up subscriptions');
+      cleanup();
+    };
   }, [driverId]);
 
   const fetchAvailableRides = async () => {
