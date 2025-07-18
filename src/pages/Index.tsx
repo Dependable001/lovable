@@ -141,7 +141,7 @@ export default function Index() {
           muted
           playsInline
         >
-          <source src="/video/hero.mp4" type="video/mp4" />
+          <source src="/video/hero.mp4?v=2" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col justify-center items-center text-center px-4">
           <h1 className="text-5xl font-bold mb-4 text-white">
