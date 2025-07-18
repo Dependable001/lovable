@@ -18,7 +18,13 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleAuth = async (email: string, password: string, fullName: string, role: 'rider' | 'driver', isSignUp: boolean) => {
+  const handleAuth = async (
+    email: string,
+    password: string,
+    fullName: string,
+    role: 'rider' | 'driver',
+    isSignUp: boolean
+  ) => {
     setLoading(true);
     setError(null);
 
@@ -37,7 +43,7 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
         });
 
         if (error) throw error;
-        
+
         toast({
           title: "Account created!",
           description: "Please check your email to verify your account.",
@@ -49,7 +55,17 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
         });
 
         if (error) throw error;
-        onSuccess();
+
+        // ✅ Wait for session to initialize
+        const { data: sessionData } = await supabase.auth.getSession();
+
+        if (sessionData.session) {
+          onSuccess(); // Redirect handled by parent
+        } else {
+          supabase.auth.onAuthStateChange((_event, session) => {
+            if (session) onSuccess();
+          });
+        }
       }
     } catch (error: any) {
       setError(error.message);
